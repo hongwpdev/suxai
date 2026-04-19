@@ -1,0 +1,81 @@
+==============================
+수자이(水Xai) 프로젝트 구조 설명
+==============================
+
+📁 suxai/
+├── app.py
+├── requirements.txt
+├── .env.example
+├── utils/
+│   ├── api.py
+│   └── anomaly.py
+└── pages/
+
+
+------------------------------
+파일별 설명
+------------------------------
+
+[app.py]
+- Streamlit으로 구성된 메인 대시보드 파일
+- 수질 / 유량 / 수문(댐) 3개 탭으로 구성
+- 각 탭에서 버튼 클릭 시 API 데이터를 불러와 화면에 표시
+- 이상징후 감지 시 경고 메시지 출력
+- 실행 명령어: streamlit run app.py
+
+
+[requirements.txt]
+- 프로젝트에 필요한 Python 라이브러리 목록
+- 설치 명령어: pip install -r requirements.txt
+- 포함 라이브러리:
+  · streamlit     : 대시보드 UI 프레임워크
+  · pandas        : 데이터 가공 및 분석
+  · requests      : API HTTP 요청
+  · python-dotenv : .env 파일에서 API 키 불러오기
+  · plotly        : 인터랙티브 차트 시각화
+
+
+[.env.example]
+- API 키를 저장하는 환경변수 파일의 예시
+- 이 파일을 복사해서 .env 파일을 만들고, API 키를 입력해야 함
+- .env 파일은 외부에 절대 공유하면 안 됨 (보안 주의)
+- 발급처: https://www.data.go.kr
+
+
+[utils/api.py]
+- 한국수자원공사(K-water) 공공데이터 API 호출 함수 모음
+- 포함 함수:
+  · get_water_quality() : 실시간 수질 정보 조회 (pH, 탁도, 잔류염소)
+  · get_water_flow()    : 실시간 유량 정보 조회
+  · get_dam_info()      : 수문 운영 정보 조회 (댐수위, 강우량, 유입량 등)
+- API 호출 결과를 pandas DataFrame 형태로 반환
+
+
+[utils/anomaly.py]
+- 수질 데이터의 이상징후를 탐지하는 로직
+- WHO 및 K-water 기준을 바탕으로 정상 범위 설정:
+  · pH            : 6.5 ~ 8.5
+  · 탁도(NTU)     : 0 ~ 0.5
+  · 잔류염소(mg/L): 0.1 ~ 4.0
+- 기준 범위를 벗어난 항목에 anomaly = True 표시
+
+
+[pages/ 폴더]
+- 현재는 비어 있는 폴더
+- 추후 기능 확장 시 페이지를 추가하는 공간
+- 예시: pages/뉴스연계.py, pages/시뮬레이션.py 등
+
+
+------------------------------
+시작하는 방법
+------------------------------
+
+1. 공공데이터포털(https://www.data.go.kr) 회원가입
+2. 아래 3개 API 활용신청:
+   - 한국수자원공사_실시간 수도정보 수질(시간) 조회 서비스
+   - 한국수자원공사_실시간 수도정보 유량(시간) 조회 서비스
+   - 한국수자원공사_수문 운영 정보
+3. .env.example 파일을 .env 로 복사 후 발급받은 API 키 입력
+4. 터미널에서 아래 명령어 실행:
+   pip install -r requirements.txt
+   streamlit run app.py
