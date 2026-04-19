@@ -1,11 +1,13 @@
 import requests
 import pandas as pd
 import os
+import streamlit as st
 from dotenv import load_dotenv
 
 load_dotenv()
 
-API_KEY = os.getenv("PUBLIC_DATA_API_KEY")
+# 로컬: .env 파일 / 클라우드: Streamlit Secrets
+API_KEY = st.secrets.get("PUBLIC_DATA_API_KEY", os.getenv("PUBLIC_DATA_API_KEY"))
 BASE_URL = "http://apis.data.go.kr/B500001/rwis"
 
 
