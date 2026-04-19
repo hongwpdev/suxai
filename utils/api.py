@@ -28,31 +28,31 @@ def _date_range(hours=1):
     }
 
 
-def get_water_quality(num_of_rows=100):
+def get_water_quality(num_of_rows=30):
     """실시간 전국 수질 정보 조회 (잔류염소, pH, 탁도)"""
     params = {
         "serviceKey": API_KEY,
         "numOfRows": num_of_rows,
         "pageNo": 1,
         "resultType": "json",
-        **_date_range(hours=1),
+        **_date_range(hours=2),
     }
-    response = requests.get(QUALITY_URL, params=params)
+    response = requests.get(QUALITY_URL, params=params, timeout=30)
     response.raise_for_status()
     items = response.json().get("response", {}).get("body", {}).get("items", [])
     return pd.DataFrame(items)
 
 
-def get_water_flow(num_of_rows=100):
+def get_water_flow(num_of_rows=30):
     """실시간 전국 유량 정보 조회"""
     params = {
         "serviceKey": API_KEY,
         "numOfRows": num_of_rows,
         "pageNo": 1,
         "resultType": "json",
-        **_date_range(hours=1),
+        **_date_range(hours=2),
     }
-    response = requests.get(FLOW_URL, params=params)
+    response = requests.get(FLOW_URL, params=params, timeout=30)
     response.raise_for_status()
     items = response.json().get("response", {}).get("body", {}).get("items", [])
     return pd.DataFrame(items)
