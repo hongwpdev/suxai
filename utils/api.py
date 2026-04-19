@@ -8,7 +8,10 @@ from datetime import datetime, timedelta
 load_dotenv()
 
 # 로컬: .env 파일 / 클라우드: Streamlit Secrets
-API_KEY = st.secrets.get("PUBLIC_DATA_API_KEY", os.getenv("PUBLIC_DATA_API_KEY"))
+try:
+    API_KEY = st.secrets["PUBLIC_DATA_API_KEY"]
+except Exception:
+    API_KEY = os.getenv("PUBLIC_DATA_API_KEY")
 QUALITY_URL = "http://apis.data.go.kr/B500001/rwis/waterQuality/list"
 FLOW_URL = "http://apis.data.go.kr/B500001/rwis/waterFlux/waterFlux"
 
