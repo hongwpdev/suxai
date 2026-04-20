@@ -11,6 +11,7 @@ from data import (
     WQ_STATIONS, FL_STATIONS,
     wq_score, fl_score, get_status,
     update_wq, update_fl,
+    fetch_wq_from_api, fetch_fl_from_api,
 )
 
 # ── 페이지 설정 ──────────────────────────────────────────
@@ -238,10 +239,26 @@ with tab_wq:
     sorted_wq = sorted(st.session_state.wq_data, key=wq_score, reverse=True)
     warn_n = sum(1 for s in sorted_wq if get_status(wq_score(s)) != "정상")
 
+    # 타이틀 + 조회 버튼
+    col_title, col_btn = st.columns([8, 1])
+    with col_title:
+        st.markdown("""
+        <h2 style='color:#e8eaf0;font-size:18px;font-weight:700;margin:16px 0 8px'>
+            실시간 수질 현황 (전국)
+        </h2>""", unsafe_allow_html=True)
+    with col_btn:
+        st.markdown("<div style='margin-top:16px'></div>", unsafe_allow_html=True)
+        if st.button("조회", key="fetch_wq", type="secondary", use_container_width=True):
+            with st.spinner("API 조회 중..."):
+                result = fetch_wq_from_api()
+                if result:
+                    st.session_state.wq_data = result
+                    st.success("수질 데이터 갱신 완료")
+                else:
+                    st.warning("API 미연동 — data.py의 fetch_wq_from_api()를 구현해주세요")
+
+    last_fetch = st.session_state.get("wq_last_fetch", "시뮬레이션 중")
     st.markdown(f"""
-    <h2 style='color:#e8eaf0;font-size:18px;font-weight:700;margin:16px 0 8px'>
-        실시간 수질 현황 (전국)
-    </h2>
     <p style='color:#5a6070;font-size:12px;margin-bottom:20px'>
         {'⚠️ ' + str(warn_n) + '개 측정소 주의·위험 &nbsp;|&nbsp; ' if warn_n else ''}
         이상징후 높은 순
@@ -253,10 +270,25 @@ with tab_fl:
     sorted_fl = sorted(st.session_state.fl_data, key=fl_score, reverse=True)
     warn_n = sum(1 for s in sorted_fl if get_status(fl_score(s)) != "정상")
 
+    # 타이틀 + 조회 버튼
+    col_title, col_btn = st.columns([8, 1])
+    with col_title:
+        st.markdown("""
+        <h2 style='color:#e8eaf0;font-size:18px;font-weight:700;margin:16px 0 8px'>
+            실시간 유량 현황 (전국)
+        </h2>""", unsafe_allow_html=True)
+    with col_btn:
+        st.markdown("<div style='margin-top:16px'></div>", unsafe_allow_html=True)
+        if st.button("조회", key="fetch_fl", type="secondary", use_container_width=True):
+            with st.spinner("API 조회 중..."):
+                result = fetch_fl_from_api()
+                if result:
+                    st.session_state.fl_data = result
+                    st.success("유량 데이터 갱신 완료")
+                else:
+                    st.warning("API 미연동 — data.py의 fetch_fl_from_api()를 구현해주세요")
+
     st.markdown(f"""
-    <h2 style='color:#e8eaf0;font-size:18px;font-weight:700;margin:16px 0 8px'>
-        실시간 유량 현황 (전국)
-    </h2>
     <p style='color:#5a6070;font-size:12px;margin-bottom:20px'>
         {'⚠️ ' + str(warn_n) + '개 측정소 주의·위험 &nbsp;|&nbsp; ' if warn_n else ''}
         이상징후 높은 순
