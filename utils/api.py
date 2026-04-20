@@ -9,9 +9,9 @@ load_dotenv()
 
 # 로컬: .env 파일 / 클라우드: Streamlit Secrets
 try:
-    API_KEY = st.secrets["PUBLIC_DATA_API_KEY"]
+    API_KEY = st.secrets["PUBLIC_DATA_API_KEY"].strip()
 except Exception:
-    API_KEY = os.getenv("PUBLIC_DATA_API_KEY")
+    API_KEY = os.getenv("PUBLIC_DATA_API_KEY", "").strip()
 QUALITY_URL = "http://apis.data.go.kr/B500001/rwis/waterQuality/list"
 FLOW_URL = "http://apis.data.go.kr/B500001/rwis/waterFlux/waterFlux"
 
@@ -28,16 +28,20 @@ def _date_range(hours=1):
     }
 
 
-def get_water_quality(num_of_rows=30):
-    """실시간 전국 수질 정보 조회 (잔류염소, pH, 탁도)"""
+def _build_url(base_url, num_of_rows):
+    from urllib.parse import urlencode
     params = {
-        "serviceKey": API_KEY,
         "numOfRows": num_of_rows,
         "pageNo": 1,
         "resultType": "json",
         **_date_range(hours=2),
     }
-    response = requests.get(QUALITY_URL, params=params, timeout=30)
+    return f"{base_url}?serviceKey={API_KEY}&{urlencode(params)}"
+
+
+def get_water_quality(num_of_rows=30):
+    """실시간 전국 수질 정보 조회 (잔류염소, pH, 탁도)"""
+    response = requests.get(_build_url(QUALITY_URL, num_of_rows), timeout=30)
     response.raise_for_status()
     items = response.json().get("response", {}).get("body", {}).get("items", [])
     return pd.DataFrame(items)
@@ -45,14 +49,7 @@ def get_water_quality(num_of_rows=30):
 
 def get_water_flow(num_of_rows=30):
     """실시간 전국 유량 정보 조회"""
-    params = {
-        "serviceKey": API_KEY,
-        "numOfRows": num_of_rows,
-        "pageNo": 1,
-        "resultType": "json",
-        **_date_range(hours=2),
-    }
-    response = requests.get(FLOW_URL, params=params, timeout=30)
+    response = requests.get(_build_url(FLOW_URL, num_of_rows), timeout=30)
     response.raise_for_status()
     items = response.json().get("response", {}).get("body", {}).get("items", [])
     return pd.DataFrame(items)
