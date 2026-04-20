@@ -76,6 +76,49 @@ def jitter(value: float, amp: float, lo: float, hi: float) -> float:
     return round(float(np.clip(value + np.random.uniform(-amp, amp), lo, hi)), 2)
 
 
+def fetch_wq_from_api() -> list[dict] | None:
+    """
+    수질 API 연동 함수 — 실제 API URL과 파라미터로 교체하세요.
+
+    예시 (환경부 수질측정망 API):
+        import requests
+        url = "https://api.example.com/water-quality"
+        params = {"serviceKey": "YOUR_KEY", "returnType": "json"}
+        res = requests.get(url, params=params, timeout=5)
+        data = res.json()
+        return [
+            {"id": item["mntrSttnCd"], "name": item["mntrSttnNm"],
+             "loc": item["sido"], "ph": float(item["ph"]),
+             "do": float(item["do"]), "turb": float(item["turb"]),
+             "ec": float(item["ec"])}
+            for item in data["items"]
+        ]
+    """
+    # TODO: 실제 API 연동 시 위 예시 코드를 참고하세요.
+    return None  # None 반환 시 기존 시뮬레이션 데이터 유지
+
+
+def fetch_fl_from_api() -> list[dict] | None:
+    """
+    유량 API 연동 함수 — 실제 API URL과 파라미터로 교체하세요.
+
+    예시 (한국수자원공사 유량 API):
+        import requests
+        url = "https://api.example.com/flow"
+        params = {"serviceKey": "YOUR_KEY", "returnType": "json"}
+        res = requests.get(url, params=params, timeout=5)
+        data = res.json()
+        return [
+            {"id": item["obscd"], "name": item["obsnm"],
+             "loc": item["addr"], "flow": float(item["flow"]),
+             "level": float(item["wl"])}
+            for item in data["items"]
+        ]
+    """
+    # TODO: 실제 API 연동 시 위 예시 코드를 참고하세요.
+    return None  # None 반환 시 기존 시뮬레이션 데이터 유지
+
+
 def update_wq(stations: list[dict]) -> list[dict]:
     """수질 데이터 실시간 변동 적용"""
     updated = []
