@@ -84,71 +84,80 @@ if "fl_data" not in st.session_state:
 st.session_state.wq_data = update_wq(st.session_state.wq_data)
 st.session_state.fl_data = update_fl(st.session_state.fl_data)
 
+# 테스트용 — app.py 세션 초기화 부분에 임시 추가
+#st.session_state.wq_data = []
+#st.session_state.fl_data = []
 
 # ── 카드 HTML 생성 ───────────────────────────────────────
 def score_color(status):
     return {"위험": "#e8453c", "주의": "#f5a623", "정상": "#3ecf70"}[status]
 
 def metric_html(label, value, cls="c-ok"):
-    return f"""
-    <div class="metric">
-        <div class="metric-lbl">{label}</div>
-        <div class="metric-val {cls}">{value}</div>
-    </div>"""
+    return (f'<div class="metric">'
+            f'<div class="metric-lbl">{label}</div>'
+            f'<div class="metric-val {cls}">{value}</div>'
+            f'</div>')
 
 def wq_card_html(rank, s):
-    sc = wq_score(s)
-    st_ = get_status(sc)
-    cls = {"위험":"crit","주의":"warn","정상":"ok"}[st_]
-    sc_color = score_color(st_)
-    ph_c  = "c-warn" if abs(s["ph"] - 7.5) > 1 else "c-ok"
-    do_c  = "c-crit" if s["do"] < 3 else "c-warn" if s["do"] < 5 else "c-ok"
-    tb_c  = "c-crit" if s["turb"] > 50 else "c-warn" if s["turb"] > 30 else "c-ok"
-    bdg_c = f"bdg-{cls}"
-    return f"""
-    <div class="s-card {cls}">
-        <span class="rank">#{rank}</span>
-        <div style="flex:1;min-width:0">
-            <div class="st-name">{s['name']}</div>
-            <div class="st-loc">{s['loc']}</div>
-        </div>
-        <div class="metrics">
-            {metric_html("pH", f"{s['ph']:.1f}", ph_c)}
-            {metric_html("DO", f"{s['do']:.1f} mg/L", do_c)}
-            {metric_html("탁도", f"{s['turb']:.0f} NTU", tb_c)}
-        </div>
-        <div class="score-wrap">
-            <div class="score-bg"><div class="score-fill" style="width:{sc}%;background:{sc_color}"></div></div>
-            <div class="score-num" style="color:{sc_color if sc > 10 else '#5a6070'}">{sc:.0f}점</div>
-        </div>
-        <span class="bdg {bdg_c}">{st_}</span>
-    </div>"""
+    sc   = wq_score(s)
+    st_  = get_status(sc)
+    cls  = {"위험":"crit","주의":"warn","정상":"ok"}[st_]
+    sc_c = score_color(st_)
+    ph_c = "c-warn" if abs(s["ph"] - 7.5) > 1 else "c-ok"
+    do_c = "c-crit" if s["do"] < 3 else "c-warn" if s["do"] < 5 else "c-ok"
+    tb_c = "c-crit" if s["turb"] > 50 else "c-warn" if s["turb"] > 30 else "c-ok"
+    ph_v   = f'{s["ph"]:.1f}'
+    do_v   = f'{s["do"]:.1f} mg/L'
+    turb_v = f'{s["turb"]:.0f} NTU'
+    sc_v   = f'{sc:.0f}점'
+    sc_nc  = sc_c if sc > 10 else "#5a6070"
+    name   = s["name"]
+    loc    = s["loc"]
+    m_ph   = metric_html("pH",   ph_v,   ph_c)
+    m_do   = metric_html("DO",   do_v,   do_c)
+    m_turb = metric_html("탁도", turb_v, tb_c)
+    return (f'<div class="s-card {cls}">'
+            f'<span class="rank">#{rank}</span>'
+            f'<div style="flex:1;min-width:0">'
+            f'<div class="st-name">{name}</div>'
+            f'<div class="st-loc">{loc}</div>'
+            f'</div>'
+            f'<div class="metrics">{m_ph}{m_do}{m_turb}</div>'
+            f'<div class="score-wrap">'
+            f'<div class="score-bg"><div class="score-fill" style="width:{sc}%;background:{sc_c}"></div></div>'
+            f'<div class="score-num" style="color:{sc_nc}">{sc_v}</div>'
+            f'</div>'
+            f'<span class="bdg bdg-{cls}">{st_}</span>'
+            f'</div>')
 
 def fl_card_html(rank, s):
-    sc = fl_score(s)
-    st_ = get_status(sc)
-    cls = {"위험":"crit","주의":"warn","정상":"ok"}[st_]
-    sc_color = score_color(st_)
+    sc   = fl_score(s)
+    st_  = get_status(sc)
+    cls  = {"위험":"crit","주의":"warn","정상":"ok"}[st_]
+    sc_c = score_color(st_)
     fl_c = "c-warn" if s["flow"] > 300 or s["flow"] < 10 else "c-ok"
     lv_c = "c-crit" if s["level"] > 15 or s["level"] < 2 else "c-ok"
-    bdg_c = f"bdg-{cls}"
-    return f"""
-    <div class="s-card {cls}">
-        <span class="rank">#{rank}</span>
-        <div style="flex:1;min-width:0">
-            <div class="st-name">{s['name']}</div>
-            <div class="st-loc">{s['loc']}</div>
-        </div>
-        <div class="metrics">
-            {metric_html("유량", f"{s['flow']:.1f} m³/s", fl_c)}
-            {metric_html("수위", f"{s['level']:.1f} m", lv_c)}
-        </div>
-        <div class="score-wrap">
-            <div class="score-bg"><div class="score-fill" style="width:{sc}%;background:{sc_color}"></div></div>
-            <div class="score-num" style="color:{sc_color if sc > 10 else '#5a6070'}">{sc:.0f}점</div>
-        </div>
-        <span class="bdg {bdg_c}">{st_}</span>
-    </div>"""
+    flow_v  = f'{s["flow"]:.1f} m\u00b3/s'
+    level_v = f'{s["level"]:.1f} m'
+    sc_v    = f'{sc:.0f}점'
+    sc_nc   = sc_c if sc > 10 else "#5a6070"
+    name    = s["name"]
+    loc     = s["loc"]
+    m_flow  = metric_html("유량", flow_v,  fl_c)
+    m_level = metric_html("수위", level_v, lv_c)
+    return (f'<div class="s-card {cls}">'
+            f'<span class="rank">#{rank}</span>'
+            f'<div style="flex:1;min-width:0">'
+            f'<div class="st-name">{name}</div>'
+            f'<div class="st-loc">{loc}</div>'
+            f'</div>'
+            f'<div class="metrics">{m_flow}{m_level}</div>'
+            f'<div class="score-wrap">'
+            f'<div class="score-bg"><div class="score-fill" style="width:{sc}%;background:{sc_c}"></div></div>'
+            f'<div class="score-num" style="color:{sc_nc}">{sc_v}</div>'
+            f'</div>'
+            f'<span class="bdg bdg-{cls}">{st_}</span>'
+            f'</div>')
 
 
 # ── 뉴스 더미 데이터 ─────────────────────────────────────
@@ -257,14 +266,20 @@ with tab_wq:
                 else:
                     st.warning("API 미연동 — data.py의 fetch_wq_from_api()를 구현해주세요")
 
-    last_fetch = st.session_state.get("wq_last_fetch", "시뮬레이션 중")
-    st.markdown(f"""
-    <p style='color:#5a6070;font-size:12px;margin-bottom:20px'>
-        {'⚠️ ' + str(warn_n) + '개 측정소 주의·위험 &nbsp;|&nbsp; ' if warn_n else ''}
-        이상징후 높은 순
-    </p>
-    """ + "".join(wq_card_html(i+1, s) for i, s in enumerate(sorted_wq)),
-    unsafe_allow_html=True)
+    wq_warn = f"⚠️ {warn_n}개 측정소 주의·위험 &nbsp;|&nbsp; " if warn_n else ""
+    wq_cards = "".join(wq_card_html(i+1, s) for i, s in enumerate(sorted_wq))
+    if wq_cards:
+        st.markdown(
+            "<p style='color:#5a6070;font-size:12px;margin-bottom:20px'>"
+            + wq_warn + "이상징후 높은 순</p>" + wq_cards,
+            unsafe_allow_html=True
+        )
+    else:
+        st.markdown(
+            "<p style='color:#5a6070;font-size:13px;padding:40px 0;text-align:center'>"
+            "데이터가 존재하지 않습니다.</p>",
+            unsafe_allow_html=True
+        )
 
 with tab_fl:
     sorted_fl = sorted(st.session_state.fl_data, key=fl_score, reverse=True)
@@ -288,13 +303,20 @@ with tab_fl:
                 else:
                     st.warning("API 미연동 — data.py의 fetch_fl_from_api()를 구현해주세요")
 
-    st.markdown(f"""
-    <p style='color:#5a6070;font-size:12px;margin-bottom:20px'>
-        {'⚠️ ' + str(warn_n) + '개 측정소 주의·위험 &nbsp;|&nbsp; ' if warn_n else ''}
-        이상징후 높은 순
-    </p>
-    """ + "".join(fl_card_html(i+1, s) for i, s in enumerate(sorted_fl)),
-    unsafe_allow_html=True)
+    fl_warn = f"⚠️ {warn_n}개 측정소 주의·위험 &nbsp;|&nbsp; " if warn_n else ""
+    fl_cards = "".join(fl_card_html(i+1, s) for i, s in enumerate(sorted_fl))
+    if fl_cards:
+        st.markdown(
+            "<p style='color:#5a6070;font-size:12px;margin-bottom:20px'>"
+            + fl_warn + "이상징후 높은 순</p>" + fl_cards,
+            unsafe_allow_html=True
+        )
+    else:
+        st.markdown(
+            "<p style='color:#5a6070;font-size:13px;padding:40px 0;text-align:center'>"
+            "데이터가 존재하지 않습니다.</p>",
+            unsafe_allow_html=True
+        )
 
 # ── 자동 갱신 (2.5초) ────────────────────────────────────
 time.sleep(2.5)
