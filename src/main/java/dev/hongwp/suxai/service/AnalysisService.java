@@ -20,14 +20,14 @@ public class AnalysisService {
     private static final DateTimeFormatter DT_FMT =
         DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
-    private final WaterQualityService wqService;
+    private final QualityService wqService;
     private final FlowService flService;
     private final GroqApiClient groqClient;
 
     private final ConcurrentHashMap<String, AnalysisResult> cache    = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Instant>        expiry   = new ConcurrentHashMap<>();
 
-    public AnalysisService(WaterQualityService wqService,
+    public AnalysisService(QualityService wqService,
                            FlowService flService,
                            GroqApiClient groqClient) {
         this.wqService = wqService;

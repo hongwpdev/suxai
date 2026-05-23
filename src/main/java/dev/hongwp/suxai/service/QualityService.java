@@ -1,6 +1,6 @@
 package dev.hongwp.suxai.service;
 
-import dev.hongwp.suxai.client.WaterQualityApiClient;
+import dev.hongwp.suxai.client.QualityApiClient;
 import dev.hongwp.suxai.model.WaterQualityRecord;
 import org.springframework.stereotype.Service;
 
@@ -9,16 +9,16 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Service
-public class WaterQualityService {
+public class QualityService {
 
     private static final long CACHE_TTL_SECONDS = 300;
 
-    private final WaterQualityApiClient apiClient;
+    private final QualityApiClient apiClient;
 
-    private final ConcurrentHashMap<String, List<WaterQualityRecord>> dataCache  = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, List<WaterQualityRecord>> dataCache   = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Instant>                  expiryCache = new ConcurrentHashMap<>();
 
-    public WaterQualityService(WaterQualityApiClient apiClient) {
+    public QualityService(QualityApiClient apiClient) {
         this.apiClient = apiClient;
     }
 

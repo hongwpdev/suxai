@@ -12,9 +12,9 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 @Component
-public class WaterQualityApiClient {
+public class QualityApiClient {
 
-    private static final Logger log = LoggerFactory.getLogger(WaterQualityApiClient.class);
+    private static final Logger log = LoggerFactory.getLogger(QualityApiClient.class);
 
     private static final String WQ_URL = "https://apis.data.go.kr/B500001/rwis/waterQuality/list";
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
@@ -22,8 +22,8 @@ public class WaterQualityApiClient {
     private final RestTemplate restTemplate;
     private final String apiKey;
 
-    public WaterQualityApiClient(RestTemplate restTemplate,
-                                 @Value("${kwater.api.key}") String apiKey) {
+    public QualityApiClient(RestTemplate restTemplate,
+                            @Value("${kwater.api.key}") String apiKey) {
         this.restTemplate = restTemplate;
         this.apiKey = apiKey;
     }

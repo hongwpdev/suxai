@@ -20,8 +20,8 @@
         │       │   └── AppConfig.java
         │       ├── controller/
         │       │   └── ApiController.java
-        │       ├── client/
-        │       │   ├── WaterQualityApiClient.java
+        │       ├── client/                    ← XxxApiClient ↔ XxxService (1:1 대응)
+        │       │   ├── QualityApiClient.java
         │       │   ├── FlowApiClient.java
         │       │   ├── FacilityApiClient.java
         │       │   └── GroqApiClient.java
@@ -31,8 +31,8 @@
         │       │   ├── FacilityInfo.java
         │       │   ├── AnalysisResult.java
         │       │   └── NewsItem.java
-        │       └── service/
-        │           ├── WaterQualityService.java
+        │       └── service/                   ← XxxService ↔ XxxApiClient (1:1 대응)
+        │           ├── QualityService.java
         │           ├── FlowService.java
         │           ├── FacilityService.java
         │           └── AnalysisService.java
@@ -93,7 +93,7 @@ client/  (외부 API 호출 전담 계층)
 
 네이밍 규칙: XxxApiClient ↔ XxxService (1:1 대응)
 
-[client/WaterQualityApiClient.java]
+[client/QualityApiClient.java]
 - K-water 수질 API 호출 및 JSON 파싱
 - 엔드포인트: https://apis.data.go.kr/B500001/rwis/waterQuality/list
 - 조회 범위: 현재 시각 기준 최근 1시간 (stDt~edDt)
@@ -175,11 +175,11 @@ service/  (비즈니스 로직·캐시 관리)
 
 네이밍 규칙: XxxService ↔ XxxApiClient (1:1 대응)
 
-[service/WaterQualityService.java]
+[service/QualityService.java]
 - 수질 데이터 캐시 관리 (sujCode별 독립 캐시)
 - 캐시 저장소: ConcurrentHashMap<String(sujCode), List<WaterQualityRecord>>
 - TTL: 5분
-- 캐시 만료 시 WaterQualityApiClient 호출하여 갱신
+- 캐시 만료 시 QualityApiClient 호출하여 갱신
 
 [service/FlowService.java]
 - 유량 데이터 캐시 관리 (sujCode별 독립 캐시)
@@ -197,7 +197,7 @@ service/  (비즈니스 로직·캐시 관리)
 - 캐시 저장소: ConcurrentHashMap<String(sujCode), AnalysisResult>
 - TTL: 5분
 - 분석 절차:
-  1. WaterQualityService·FlowService에서 수질·유량 데이터 조회
+  1. QualityService·FlowService에서 수질·유량 데이터 조회
   2. fcltyMngNo 기준으로 두 데이터셋 조인
   3. 프롬프트 구성 (통합 데이터 / 수질만 / 유량만 3섹션)
   4. GroqApiClient로 AI 분석 요청
@@ -247,7 +247,7 @@ resources/
 서비스               캐시 키       TTL      저장소
 --------------------+-------------+--------+---------------------
 FacilityService     단일 (전체)    24시간   volatile 필드
-WaterQualityService sujCode       5분      ConcurrentHashMap
+QualityService      sujCode       5분      ConcurrentHashMap
 FlowService         sujCode       5분      ConcurrentHashMap
 AnalysisService     sujCode       5분      ConcurrentHashMap
 
@@ -256,12 +256,12 @@ AnalysisService     sujCode       5분      ConcurrentHashMap
 외부 API 연동 요약
 ------------------------------
 
-클라이언트              엔드포인트                                        응답 형식
-----------------------+------------------------------------------------+---------
-WaterQualityApiClient  apis.data.go.kr/.../waterQuality/list             JSON
-FlowApiClient          apis.data.go.kr/.../waterFlux/waterFlux           JSON
-FacilityApiClient      apis.data.go.kr/.../waterQuality/fcltylist/...    JSON
-GroqApiClient          api.groq.com/openai/v1/chat/completions           JSON
+클라이언트          엔드포인트                                        응답 형식
+------------------+------------------------------------------------+---------
+QualityApiClient   apis.data.go.kr/.../waterQuality/list             JSON
+FlowApiClient      apis.data.go.kr/.../waterFlux/waterFlux           JSON
+FacilityApiClient  apis.data.go.kr/.../waterQuality/fcltylist/...    JSON
+GroqApiClient      api.groq.com/openai/v1/chat/completions           JSON
 
 
 ------------------------------

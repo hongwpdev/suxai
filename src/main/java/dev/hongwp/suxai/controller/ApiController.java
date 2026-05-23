@@ -11,7 +11,7 @@ import java.util.List;
 @RequestMapping("/api")
 public class ApiController {
 
-    private final WaterQualityService wqService;
+    private final QualityService wqService;
     private final FlowService         flService;
     private final AnalysisService     analysisService;
     private final FacilityService     facilityService;
@@ -27,7 +27,7 @@ public class ApiController {
         new NewsItem("crit", "영산강 나주 구간 DO 4.8mg/L 기록 — 어류 폐사 우려")
     );
 
-    public ApiController(WaterQualityService wqService,
+    public ApiController(QualityService wqService,
                          FlowService flService,
                          AnalysisService analysisService,
                          FacilityService facilityService,
