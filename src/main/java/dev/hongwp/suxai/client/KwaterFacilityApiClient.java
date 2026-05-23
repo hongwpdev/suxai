@@ -6,15 +6,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
-import org.w3c.dom.Document;
-import org.w3c.dom.NodeList;
-import org.xml.sax.InputSource;
 
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import java.io.StringReader;
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 @Component
 public class KwaterFacilityApiClient {
@@ -35,54 +30,64 @@ public class KwaterFacilityApiClient {
 
     public List<FacilityInfo> fetchFacilities() {
         try {
-            String raw = restTemplate.getForObject(BASE_URL + apiKey, String.class);
-            log.info("정수장 목록 API 응답 (앞 200자): {}",
-                raw == null ? "null" : raw.substring(0, Math.min(200, raw.length())));
-            return parseXml(raw);
+            @SuppressWarnings("unchecked")
+            Map<String, Object> response = restTemplate.getForObject(BASE_URL + apiKey, Map.class);
+            return parseResponse(response);
         } catch (Exception e) {
             log.error("정수장 목록 API 호출 실패: {}", e.getMessage());
             return List.of();
         }
     }
 
-    private List<FacilityInfo> parseXml(String xml) {
-        List<FacilityInfo> result = new ArrayList<>();
-        if (xml == null || xml.isBlank()) {
-            log.error("정수장 목록 API 응답 없음");
-            return result;
-        }
-
-        // BOM(U+FEFF) 및 앞쪽 공백 제거
-        xml = xml.replace("﻿", "").stripLeading();
-
-        if (!xml.startsWith("<")) {
-            log.error("정수장 목록 API가 XML이 아닌 응답 반환: {}",
-                xml.substring(0, Math.min(300, xml.length())));
-            return result;
-        }
-
+    @SuppressWarnings("unchecked")
+    private List<FacilityInfo> parseResponse(Map<String, Object> response) {
+        if (response == null) return Collections.emptyList();
         try {
-            DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
-            Document doc = builder.parse(new InputSource(new StringReader(xml)));
+            Map<String, Object> responseMap = (Map<String, Object>) response.get("response");
+            if (responseMap == null) return Collections.emptyList();
 
-            NodeList items = doc.getElementsByTagName("item");
-            for (int i = 0; i < items.getLength(); i++) {
-                NodeList children = items.item(i).getChildNodes();
-                String name = "", sujCode = "";
-                for (int j = 0; j < children.getLength(); j++) {
-                    String tag = children.item(j).getNodeName();
-                    String val = children.item(j).getTextContent().trim();
-                    if ("fcltyMngNm".equals(tag))   name    = val;
-                    else if ("sujCode".equals(tag))  sujCode = val;
-                }
-                if (!sujCode.isBlank() && !name.isBlank()) {
-                    result.add(new FacilityInfo(sujCode, name, ""));
-                }
+            Map<String, Object> header = (Map<String, Object>) responseMap.get("header");
+            if (header != null && !"00".equals(String.valueOf(header.get("resultCode")))) {
+                log.warn("정수장 목록 API 오류 응답: {}", header.get("resultMsg"));
+                return Collections.emptyList();
             }
+
+            Map<String, Object> body = (Map<String, Object>) responseMap.get("body");
+            if (body == null) return Collections.emptyList();
+
+            Map<String, Object> items = (Map<String, Object>) body.get("items");
+            if (items == null) return Collections.emptyList();
+
+            Object itemObj = items.get("item");
+            List<Map<String, Object>> itemList;
+            if (itemObj instanceof List<?> list) {
+                itemList = (List<Map<String, Object>>) list;
+            } else if (itemObj instanceof Map) {
+                itemList = List.of((Map<String, Object>) itemObj);
+            } else {
+                return Collections.emptyList();
+            }
+
+            List<FacilityInfo> result = itemList.stream()
+                .map(item -> {
+                    String name    = str(item, "fcltyMngNm");
+                    String sujCode = str(item, "sujCode");
+                    return new FacilityInfo(sujCode, name, "");
+                })
+                .filter(f -> !f.getSujCode().isBlank() && !f.getFacilityName().isBlank())
+                .toList();
+
             log.info("정수장 목록 {}개 파싱 완료", result.size());
+            return result;
+
         } catch (Exception e) {
-            log.error("정수장 목록 XML 파싱 실패: {}", e.getMessage());
+            log.error("정수장 목록 JSON 파싱 실패: {}", e.getMessage());
+            return Collections.emptyList();
         }
-        return result;
+    }
+
+    private String str(Map<String, Object> m, String key) {
+        Object v = m.get(key);
+        return v == null ? "" : v.toString().trim();
     }
 }
