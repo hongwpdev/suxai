@@ -15,9 +15,9 @@ import java.util.Map;
 import java.util.Objects;
 
 @Component
-public class KwaterFlowApiClient {
+public class FlowApiClient {
 
-    private static final Logger log = LoggerFactory.getLogger(KwaterFlowApiClient.class);
+    private static final Logger log = LoggerFactory.getLogger(FlowApiClient.class);
 
     private static final String FLOW_URL = "https://apis.data.go.kr/B500001/rwis/waterFlux/waterFlux";
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
@@ -25,8 +25,8 @@ public class KwaterFlowApiClient {
     private final RestTemplate restTemplate;
     private final String apiKey;
 
-    public KwaterFlowApiClient(RestTemplate restTemplate,
-                               @Value("${kwater.api.key}") String apiKey) {
+    public FlowApiClient(RestTemplate restTemplate,
+                         @Value("${kwater.api.key}") String apiKey) {
         this.restTemplate = restTemplate;
         this.apiKey = apiKey;
     }

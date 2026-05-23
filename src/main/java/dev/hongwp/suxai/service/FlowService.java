@@ -1,6 +1,6 @@
 package dev.hongwp.suxai.service;
 
-import dev.hongwp.suxai.client.KwaterFlowApiClient;
+import dev.hongwp.suxai.client.FlowApiClient;
 import dev.hongwp.suxai.model.FlowRecord;
 import org.springframework.stereotype.Service;
 
@@ -13,12 +13,12 @@ public class FlowService {
 
     private static final long CACHE_TTL_SECONDS = 300;
 
-    private final KwaterFlowApiClient apiClient;
+    private final FlowApiClient apiClient;
 
     private final ConcurrentHashMap<String, List<FlowRecord>> dataCache   = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Instant>          expiryCache = new ConcurrentHashMap<>();
 
-    public FlowService(KwaterFlowApiClient apiClient) {
+    public FlowService(FlowApiClient apiClient) {
         this.apiClient = apiClient;
     }
 

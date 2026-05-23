@@ -330,7 +330,7 @@
             }
 
             sel.innerHTML = list.map(f =>
-                `<option value="${f.sujCode}">[${f.sujCode}] ${f.facilityName} — ${f.address}</option>`
+                `<option value="${f.sujCode}">[${f.sujCode}] ${f.facilityName}</option>`
             ).join('');
 
             document.getElementById('facilityCount').textContent = `총 ${list.length}개`;

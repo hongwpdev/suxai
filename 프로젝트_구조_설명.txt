@@ -17,29 +17,25 @@
         │   └── dev/hongwp/suxai/
         │       ├── SuxaiApplication.java
         │       ├── config/
-        │       │   └── AppConfig.java             ← RestTemplate 타임아웃 설정
+        │       │   └── AppConfig.java
         │       ├── controller/
         │       │   └── ApiController.java
-        │       ├── client/                         ← 외부 API 호출 전담
-        │       │   ├── KwaterWaterQualityApiClient.java
-        │       │   ├── KwaterFlowApiClient.java
-        │       │   ├── KwaterFacilityApiClient.java
+        │       ├── client/
+        │       │   ├── WaterQualityApiClient.java
+        │       │   ├── FlowApiClient.java
+        │       │   ├── FacilityApiClient.java
         │       │   └── GroqApiClient.java
         │       ├── model/
-        │       │   ├── WaterQualityRecord.java     ← 현행
-        │       │   ├── FlowRecord.java             ← 현행
-        │       │   ├── FacilityInfo.java           ← 현행
-        │       │   ├── AnalysisResult.java         ← 현행
-        │       │   ├── NewsItem.java               ← 현행
-        │       │   ├── WaterQualityStation.java    ← 미사용 레거시
-        │       │   └── FlowStation.java            ← 미사용 레거시
-        │       ├── service/
-        │       │   ├── WaterQualityService.java
-        │       │   ├── FlowService.java
-        │       │   ├── FacilityService.java
-        │       │   └── AnalysisService.java
-        │       └── util/
-        │           └── AnomalyScorer.java          ← 미사용 레거시
+        │       │   ├── WaterQualityRecord.java
+        │       │   ├── FlowRecord.java
+        │       │   ├── FacilityInfo.java
+        │       │   ├── AnalysisResult.java
+        │       │   └── NewsItem.java
+        │       └── service/
+        │           ├── WaterQualityService.java
+        │           ├── FlowService.java
+        │           ├── FacilityService.java
+        │           └── AnalysisService.java
         └── resources/
             ├── application.properties              ← API 키 포함, .gitignore 처리
             ├── application.properties.example      ← 키 형식 예시 (GitHub 공개용)
@@ -88,28 +84,29 @@ controller/
   · GET /api/analysis      : AI 이상징후 분석 (sujCode 파라미터, 선택)
   · GET /api/news          : 수계 뉴스 티커 목록
 - sujCode 미입력 시 application.properties의 kwater.suj.code 기본값 사용
-- 뉴스 데이터는 컨트롤러 내 하드코딩 (7개 항목, Phase 2에서 실데이터 전환 예정)
+- 뉴스 데이터는 컨트롤러 내 하드코딩 (Phase 2에서 실데이터 전환 예정)
 
 
 ------------------------------
 client/  (외부 API 호출 전담 계층)
 ------------------------------
 
-[client/KwaterWaterQualityApiClient.java]
+네이밍 규칙: XxxApiClient ↔ XxxService (1:1 대응)
+
+[client/WaterQualityApiClient.java]
 - K-water 수질 API 호출 및 JSON 파싱
 - 엔드포인트: https://apis.data.go.kr/B500001/rwis/waterQuality/list
-- 요청 파라미터: serviceKey, stDt, stTm, edDt, edTm, sujCode, pageNo, numOfRows
-- 조회 범위: 현재 시각 기준 최근 1시간
+- 조회 범위: 현재 시각 기준 최근 1시간 (stDt~edDt)
 - 응답 파싱: Map<String, Object> → WaterQualityRecord 변환
 - occrrncDt 포맷 변환: YYYYMMDDhh → YYYY-MM-DD hh시
 
-[client/KwaterFlowApiClient.java]
+[client/FlowApiClient.java]
 - K-water 유량 API 호출 및 JSON 파싱
 - 엔드포인트: https://apis.data.go.kr/B500001/rwis/waterFlux/waterFlux
 - 응답 파싱: Map<String, Object> → FlowRecord 변환
 - divType 변환: M → 순간 / D → 적산
 
-[client/KwaterFacilityApiClient.java]
+[client/FacilityApiClient.java]
 - K-water 정수장 목록 API 호출 및 JSON 파싱
 - 엔드포인트: https://apis.data.go.kr/B500001/rwis/waterQuality/fcltylist/codelist
 - 요청 파라미터: fcltyDivCode=2, numOfRows=100, pageNo=1
@@ -121,14 +118,13 @@ client/  (외부 API 호출 전담 계층)
 - 모델: llama-3.3-70b-versatile
 - max_tokens: 2048
 - 시스템 프롬프트: 한국어 전용 출력, 한자 사용 금지
-- API 키 미설정 시 isConfigured()=false 반환 → 분석 스킵
 
 
 ------------------------------
 model/  (데이터 모델)
 ------------------------------
 
-[model/WaterQualityRecord.java]  ← 현행
+[model/WaterQualityRecord.java]
 - K-water 수질 API 응답 매핑 모델
 - 필드:
   · id          : 시설관리번호 (fcltyMngNo)
@@ -140,7 +136,7 @@ model/  (데이터 모델)
   · tbVal/tbUnit: 탁도 값·단위 (NTU)
   · clVal/clUnit: 잔류염소 값·단위 (mg/L)
 
-[model/FlowRecord.java]  ← 현행
+[model/FlowRecord.java]
 - K-water 유량 API 응답 매핑 모델
 - 필드:
   · id          : 시설관리번호 (fcltyMngNo)
@@ -151,14 +147,14 @@ model/  (데이터 모델)
   · measuredAt  : 측정시간
   · divType     : 유형 - 순간 / 적산
 
-[model/FacilityInfo.java]  ← 현행
+[model/FacilityInfo.java]
 - 정수장 목록 API 응답 매핑 모델
 - 필드:
   · sujCode     : 수계 코드
   · facilityName: 정수장 명칭
   · address     : 주소 (현재 미제공, 빈 문자열)
 
-[model/AnalysisResult.java]  ← 현행
+[model/AnalysisResult.java]
 - AI 분석 결과 모델
 - 필드:
   · analysis   : AI 분석 리포트 본문 (마크다운 **볼드** 포함)
@@ -166,38 +162,35 @@ model/  (데이터 모델)
   · wqCount    : 분석에 사용된 수질 데이터 건수
   · flCount    : 분석에 사용된 유량 데이터 건수
 
-[model/NewsItem.java]  ← 현행
+[model/NewsItem.java]
 - 뉴스 티커 항목 모델
 - 필드:
   · level  : 심각도 (crit / warn / ok)
   · content: 뉴스 본문
-
-[model/WaterQualityStation.java]  ← 미사용 레거시 (삭제 예정)
-- 초기 프로토타입 모델. 현재 아무 곳에서도 참조되지 않음
-
-[model/FlowStation.java]  ← 미사용 레거시 (삭제 예정)
-- 초기 프로토타입 모델. 현재 아무 곳에서도 참조되지 않음
 
 
 ------------------------------
 service/  (비즈니스 로직·캐시 관리)
 ------------------------------
 
+네이밍 규칙: XxxService ↔ XxxApiClient (1:1 대응)
+
 [service/WaterQualityService.java]
 - 수질 데이터 캐시 관리 (sujCode별 독립 캐시)
 - 캐시 저장소: ConcurrentHashMap<String(sujCode), List<WaterQualityRecord>>
 - TTL: 5분
-- 캐시 만료 시 KwaterWaterQualityApiClient 호출하여 갱신
+- 캐시 만료 시 WaterQualityApiClient 호출하여 갱신
 
 [service/FlowService.java]
 - 유량 데이터 캐시 관리 (sujCode별 독립 캐시)
 - 캐시 저장소: ConcurrentHashMap<String(sujCode), List<FlowRecord>>
 - TTL: 5분
+- 캐시 만료 시 FlowApiClient 호출하여 갱신
 
 [service/FacilityService.java]
 - 정수장 목록 캐시 관리 (전체 목록 단일 캐시)
 - TTL: 24시간
-- 캐시 만료 시 KwaterFacilityApiClient 호출하여 갱신
+- 캐시 만료 시 FacilityApiClient 호출하여 갱신
 
 [service/AnalysisService.java]
 - AI 이상징후 분석 요청 및 결과 캐시 (sujCode별 독립 캐시)
@@ -209,15 +202,6 @@ service/  (비즈니스 로직·캐시 관리)
   3. 프롬프트 구성 (통합 데이터 / 수질만 / 유량만 3섹션)
   4. GroqApiClient로 AI 분석 요청
   5. 결과 캐시 저장
-
-
-------------------------------
-util/
-------------------------------
-
-[util/AnomalyScorer.java]  ← 미사용 레거시 (삭제 예정)
-- 초기 프로토타입의 이상징후 점수 계산 유틸리티
-- 현재 아무 곳에서도 참조되지 않음
 
 
 ------------------------------
@@ -234,8 +218,7 @@ resources/
 
 [application.properties.example]  ← GitHub 공개용 템플릿
 - 실제 키 없이 형식만 기재
-- 팀원이 복사하여 application.properties로 사용
-
+- 복사 후 application.properties로 사용
 
 [static/index.html]
 - 단일 페이지 대시보드 (SPA)
@@ -273,23 +256,12 @@ AnalysisService     sujCode       5분      ConcurrentHashMap
 외부 API 연동 요약
 ------------------------------
 
-클라이언트                    엔드포인트                                       응답 형식
-----------------------------+------------------------------------------------+----------
-KwaterWaterQualityApiClient  apis.data.go.kr/.../waterQuality/list            JSON
-KwaterFlowApiClient          apis.data.go.kr/.../waterFlux/waterFlux          JSON
-KwaterFacilityApiClient      apis.data.go.kr/.../waterQuality/fcltylist/...   JSON
-GroqApiClient                api.groq.com/openai/v1/chat/completions          JSON
-
-
-------------------------------
-레거시 파일 (삭제 예정)
-------------------------------
-
-파일                           이유
-------------------------------+------------------------------------------
-model/WaterQualityStation.java  초기 프로토타입 모델, 현재 미참조
-model/FlowStation.java          초기 프로토타입 모델, 현재 미참조
-util/AnomalyScorer.java         초기 프로토타입 유틸, 현재 미참조
+클라이언트              엔드포인트                                        응답 형식
+----------------------+------------------------------------------------+---------
+WaterQualityApiClient  apis.data.go.kr/.../waterQuality/list             JSON
+FlowApiClient          apis.data.go.kr/.../waterFlux/waterFlux           JSON
+FacilityApiClient      apis.data.go.kr/.../waterQuality/fcltylist/...    JSON
+GroqApiClient          api.groq.com/openai/v1/chat/completions           JSON
 
 
 ------------------------------

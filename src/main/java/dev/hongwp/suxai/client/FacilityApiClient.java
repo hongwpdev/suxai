@@ -12,9 +12,9 @@ import java.util.List;
 import java.util.Map;
 
 @Component
-public class KwaterFacilityApiClient {
+public class FacilityApiClient {
 
-    private static final Logger log = LoggerFactory.getLogger(KwaterFacilityApiClient.class);
+    private static final Logger log = LoggerFactory.getLogger(FacilityApiClient.class);
     private static final String BASE_URL =
         "https://apis.data.go.kr/B500001/rwis/waterQuality/fcltylist/codelist" +
         "?fcltyDivCode=2&numOfRows=100&pageNo=1&serviceKey=";
@@ -22,8 +22,8 @@ public class KwaterFacilityApiClient {
     private final RestTemplate restTemplate;
     private final String apiKey;
 
-    public KwaterFacilityApiClient(RestTemplate restTemplate,
-                                   @Value("${kwater.api.key}") String apiKey) {
+    public FacilityApiClient(RestTemplate restTemplate,
+                             @Value("${kwater.api.key}") String apiKey) {
         this.restTemplate = restTemplate;
         this.apiKey = apiKey;
     }

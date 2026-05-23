@@ -1,6 +1,6 @@
 package dev.hongwp.suxai.service;
 
-import dev.hongwp.suxai.client.KwaterFacilityApiClient;
+import dev.hongwp.suxai.client.FacilityApiClient;
 import dev.hongwp.suxai.model.FacilityInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,12 +15,12 @@ public class FacilityService {
     private static final Logger log = LoggerFactory.getLogger(FacilityService.class);
     private static final long CACHE_TTL_SECONDS = 86_400; // 24시간
 
-    private final KwaterFacilityApiClient facilityClient;
+    private final FacilityApiClient facilityClient;
 
     private volatile List<FacilityInfo> cached = List.of();
     private volatile Instant cacheExpiredAt = Instant.EPOCH;
 
-    public FacilityService(KwaterFacilityApiClient facilityClient) {
+    public FacilityService(FacilityApiClient facilityClient) {
         this.facilityClient = facilityClient;
     }
 

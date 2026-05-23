@@ -12,9 +12,9 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 @Component
-public class KwaterWaterQualityApiClient {
+public class WaterQualityApiClient {
 
-    private static final Logger log = LoggerFactory.getLogger(KwaterWaterQualityApiClient.class);
+    private static final Logger log = LoggerFactory.getLogger(WaterQualityApiClient.class);
 
     private static final String WQ_URL = "https://apis.data.go.kr/B500001/rwis/waterQuality/list";
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
@@ -22,8 +22,8 @@ public class KwaterWaterQualityApiClient {
     private final RestTemplate restTemplate;
     private final String apiKey;
 
-    public KwaterWaterQualityApiClient(RestTemplate restTemplate,
-                                       @Value("${kwater.api.key}") String apiKey) {
+    public WaterQualityApiClient(RestTemplate restTemplate,
+                                 @Value("${kwater.api.key}") String apiKey) {
         this.restTemplate = restTemplate;
         this.apiKey = apiKey;
     }
@@ -89,7 +89,7 @@ public class KwaterWaterQualityApiClient {
             return Collections.emptyList();
 
         } catch (Exception e) {
-            log.error("정수장 목록 파싱 실패: {}", e.getMessage());
+            log.error("수질 목록 파싱 실패: {}", e.getMessage());
             return Collections.emptyList();
         }
     }
