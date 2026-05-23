@@ -10,6 +10,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 @Service
@@ -23,8 +24,8 @@ public class AnalysisService {
     private final FlowService flService;
     private final GroqApiClient groqClient;
 
-    private volatile AnalysisResult cached = null;
-    private volatile Instant cacheExpiredAt = Instant.EPOCH;
+    private final ConcurrentHashMap<String, AnalysisResult> cache    = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Instant>        expiry   = new ConcurrentHashMap<>();
 
     public AnalysisService(WaterQualityService wqService,
                            FlowService flService,
@@ -43,8 +44,9 @@ public class AnalysisService {
             );
         }
 
-        if (cached != null && Instant.now().isBefore(cacheExpiredAt)) {
-            return cached;
+        Instant exp = expiry.get(sujCode);
+        if (exp != null && Instant.now().isBefore(exp)) {
+            return cache.get(sujCode);
         }
 
         List<WaterQualityRecord> wqList = wqService.getRecords(sujCode);
@@ -53,9 +55,10 @@ public class AnalysisService {
         String prompt = buildPrompt(wqList, flList);
         String result = groqClient.analyze(prompt);
 
-        cached = new AnalysisResult(result, now(), wqList.size(), flList.size());
-        cacheExpiredAt = Instant.now().plusSeconds(CACHE_TTL_SECONDS);
-        return cached;
+        AnalysisResult analysisResult = new AnalysisResult(result, now(), wqList.size(), flList.size());
+        cache.put(sujCode, analysisResult);
+        expiry.put(sujCode, Instant.now().plusSeconds(CACHE_TTL_SECONDS));
+        return analysisResult;
     }
 
     private String buildPrompt(List<WaterQualityRecord> wqList, List<FlowRecord> flList) {
