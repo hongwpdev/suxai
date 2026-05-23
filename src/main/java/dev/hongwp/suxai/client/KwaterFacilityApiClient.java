@@ -20,8 +20,9 @@ import java.util.List;
 public class KwaterFacilityApiClient {
 
     private static final Logger log = LoggerFactory.getLogger(KwaterFacilityApiClient.class);
-    private static final String URL =
-        "http://apis.data.go.kr/B500001/rwis/waterFlux/fcltylist/codelist?fcltyDivCode=1&serviceKey=";
+    private static final String BASE_URL =
+        "https://apis.data.go.kr/B500001/rwis/waterQuality/fcltylist/codelist" +
+        "?fcltyDivCode=2&numOfRows=100&pageNo=1&serviceKey=";
 
     private final RestTemplate restTemplate;
     private final String apiKey;
@@ -34,8 +35,10 @@ public class KwaterFacilityApiClient {
 
     public List<FacilityInfo> fetchFacilities() {
         try {
-            String xml = restTemplate.getForObject(URL + apiKey, String.class);
-            return parseXml(xml);
+            String raw = restTemplate.getForObject(BASE_URL + apiKey, String.class);
+            log.info("정수장 목록 API 응답 (앞 200자): {}",
+                raw == null ? "null" : raw.substring(0, Math.min(200, raw.length())));
+            return parseXml(raw);
         } catch (Exception e) {
             log.error("정수장 목록 API 호출 실패: {}", e.getMessage());
             return List.of();
@@ -44,6 +47,20 @@ public class KwaterFacilityApiClient {
 
     private List<FacilityInfo> parseXml(String xml) {
         List<FacilityInfo> result = new ArrayList<>();
+        if (xml == null || xml.isBlank()) {
+            log.error("정수장 목록 API 응답 없음");
+            return result;
+        }
+
+        // BOM(U+FEFF) 및 앞쪽 공백 제거
+        xml = xml.replace("﻿", "").stripLeading();
+
+        if (!xml.startsWith("<")) {
+            log.error("정수장 목록 API가 XML이 아닌 응답 반환: {}",
+                xml.substring(0, Math.min(300, xml.length())));
+            return result;
+        }
+
         try {
             DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
             Document doc = builder.parse(new InputSource(new StringReader(xml)));
@@ -55,8 +72,8 @@ public class KwaterFacilityApiClient {
                 for (int j = 0; j < children.getLength(); j++) {
                     String tag = children.item(j).getNodeName();
                     String val = children.item(j).getTextContent().trim();
-                    if ("fcltyMngNm".equals(tag))  name    = val;
-                    else if ("sujCode".equals(tag)) sujCode = val;
+                    if ("fcltyMngNm".equals(tag))   name    = val;
+                    else if ("sujCode".equals(tag))  sujCode = val;
                 }
                 if (!sujCode.isBlank() && !name.isBlank()) {
                     result.add(new FacilityInfo(sujCode, name, ""));
