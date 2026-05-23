@@ -1,0 +1,11 @@
+spring.application.name=suxai
+server.port=8080
+
+# K-water 공공데이터 API 키 (data.go.kr 발급)
+kwater.api.key=YOUR_KWATER_API_KEY_HERE
+
+# 수계 코드 (318=한강수계 파주권역 / 변경 시 두 API 동시 적용)
+kwater.suj.code=318
+
+# Groq API 키 (console.groq.com 발급)
+groq.api.key=YOUR_GROQ_API_KEY_HERE

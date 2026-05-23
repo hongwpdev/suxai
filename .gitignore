@@ -2,3 +2,16 @@
 __pycache__/
 *.pyc
 .DS_Store
+
+# Maven
+target/
+*.class
+*.jar
+
+# API 키가 담긴 설정 파일 — 절대 커밋하지 않음
+src/main/resources/application.properties
+
+# IDE
+.idea/
+*.iml
+.vscode/
