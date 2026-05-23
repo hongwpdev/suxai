@@ -34,7 +34,7 @@ public class AnalysisService {
         this.groqClient = groqClient;
     }
 
-    public AnalysisResult analyze() {
+    public AnalysisResult analyze(String sujCode) {
         if (!groqClient.isConfigured()) {
             return new AnalysisResult(
                 "Groq API 키가 설정되지 않았습니다.\n" +
@@ -47,8 +47,8 @@ public class AnalysisService {
             return cached;
         }
 
-        List<WaterQualityRecord> wqList = wqService.getRecords();
-        List<FlowRecord> flList = flService.getRecords();
+        List<WaterQualityRecord> wqList = wqService.getRecords(sujCode);
+        List<FlowRecord> flList = flService.getRecords(sujCode);
 
         String prompt = buildPrompt(wqList, flList);
         String result = groqClient.analyze(prompt);

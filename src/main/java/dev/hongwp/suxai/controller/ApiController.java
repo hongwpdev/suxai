@@ -1,15 +1,9 @@
 package dev.hongwp.suxai.controller;
 
-import dev.hongwp.suxai.model.AnalysisResult;
-import dev.hongwp.suxai.model.FlowRecord;
-import dev.hongwp.suxai.model.NewsItem;
-import dev.hongwp.suxai.model.WaterQualityRecord;
-import dev.hongwp.suxai.service.AnalysisService;
-import dev.hongwp.suxai.service.FlowService;
-import dev.hongwp.suxai.service.WaterQualityService;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import dev.hongwp.suxai.model.*;
+import dev.hongwp.suxai.service.*;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -18,8 +12,10 @@ import java.util.List;
 public class ApiController {
 
     private final WaterQualityService wqService;
-    private final FlowService flService;
-    private final AnalysisService analysisService;
+    private final FlowService         flService;
+    private final AnalysisService     analysisService;
+    private final FacilityService     facilityService;
+    private final String              defaultSujCode;
 
     private static final List<NewsItem> NEWS = List.of(
         new NewsItem("crit", "충북 화학공장 폐수 무단방류 의혹 — 인근 하천 전기전도도 정상치 3배 초과"),
@@ -33,25 +29,37 @@ public class ApiController {
 
     public ApiController(WaterQualityService wqService,
                          FlowService flService,
-                         AnalysisService analysisService) {
-        this.wqService = wqService;
-        this.flService = flService;
+                         AnalysisService analysisService,
+                         FacilityService facilityService,
+                         @Value("${kwater.suj.code}") String defaultSujCode) {
+        this.wqService       = wqService;
+        this.flService       = flService;
         this.analysisService = analysisService;
+        this.facilityService = facilityService;
+        this.defaultSujCode  = defaultSujCode;
+    }
+
+    @GetMapping("/facilities")
+    public List<FacilityInfo> facilities() {
+        return facilityService.getFacilities();
     }
 
     @GetMapping("/waterQuality")
-    public List<WaterQualityRecord> waterQuality() {
-        return wqService.getRecords();
+    public List<WaterQualityRecord> waterQuality(
+            @RequestParam(required = false) String sujCode) {
+        return wqService.getRecords(sujCode != null ? sujCode : defaultSujCode);
     }
 
     @GetMapping("/waterFlow")
-    public List<FlowRecord> flow() {
-        return flService.getRecords();
+    public List<FlowRecord> flow(
+            @RequestParam(required = false) String sujCode) {
+        return flService.getRecords(sujCode != null ? sujCode : defaultSujCode);
     }
 
     @GetMapping("/analysis")
-    public AnalysisResult analysis() {
-        return analysisService.analyze();
+    public AnalysisResult analysis(
+            @RequestParam(required = false) String sujCode) {
+        return analysisService.analyze(sujCode != null ? sujCode : defaultSujCode);
     }
 
     @GetMapping("/news")

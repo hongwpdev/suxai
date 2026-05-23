@@ -12,6 +12,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 @Component
 public class KwaterFlowApiClient {
@@ -20,22 +21,18 @@ public class KwaterFlowApiClient {
 
     private static final String FLOW_URL = "https://apis.data.go.kr/B500001/rwis/waterFlux/waterFlux";
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-    private static final DateTimeFormatter HOUR_FMT = DateTimeFormatter.ofPattern("HH");
 
     private final RestTemplate restTemplate;
     private final String apiKey;
-    private final String sujCode;
 
     public KwaterFlowApiClient(RestTemplate restTemplate,
-                               @Value("${kwater.api.key}") String apiKey,
-                               @Value("${kwater.suj.code}") String sujCode) {
+                               @Value("${kwater.api.key}") String apiKey) {
         this.restTemplate = restTemplate;
         this.apiKey = apiKey;
-        this.sujCode = sujCode;
     }
 
-    public List<FlowRecord> fetchFlowRecords() {
-        if (apiKey.equals("YOUR_API_KEY_HERE") || apiKey.isBlank()) {
+    public List<FlowRecord> fetchFlowRecords(String sujCode) {
+        if (apiKey.isBlank()) {
             log.warn("K-water API 키 미설정 — 유량 데이터 없음");
             return Collections.emptyList();
         }
@@ -54,7 +51,7 @@ public class KwaterFlowApiClient {
                 + "&pageNo=1"
                 + "&numOfRows=100";
 
-            log.info("유량 API 호출: {}", url);
+            log.info("유량 API 호출: sujCode={}", sujCode);
 
             @SuppressWarnings("unchecked")
             Map<String, Object> response = restTemplate.getForObject(url, Map.class);
@@ -82,9 +79,8 @@ public class KwaterFlowApiClient {
 
             Object header = responseMap.get("header");
             if (header instanceof Map<?, ?> h) {
-                String resultCode = String.valueOf(h.get("resultCode"));
-                if (!"00".equals(resultCode)) {
-                    log.error("유량 API 오류코드={} 메시지={}", resultCode, h.get("resultMsg"));
+                if (!"00".equals(String.valueOf(h.get("resultCode")))) {
+                    log.error("유량 API 오류코드={} 메시지={}", h.get("resultCode"), h.get("resultMsg"));
                     return Collections.emptyList();
                 }
             }
@@ -98,7 +94,6 @@ public class KwaterFlowApiClient {
                 return Collections.emptyList();
             }
 
-            // items = { item: [...] } 구조
             Map<String, Object> itemsMap = (Map<String, Object>) itemsObj;
             Object itemObj = itemsMap.get("item");
 
@@ -113,11 +108,7 @@ public class KwaterFlowApiClient {
             }
 
             log.info("유량 API 아이템 {}건 수신", items.size());
-
-            return items.stream()
-                .map(this::toFlowRecord)
-                .filter(r -> r != null)
-                .toList();
+            return items.stream().map(this::toFlowRecord).filter(Objects::nonNull).toList();
 
         } catch (Exception e) {
             log.error("유량 API 응답 파싱 실패: {}", e.getMessage());
@@ -127,23 +118,19 @@ public class KwaterFlowApiClient {
 
     private FlowRecord toFlowRecord(Map<String, Object> item) {
         try {
-            String id           = str(item, "fcltyMngNo");
-            String facilityName = str(item, "fcltyNm");
-            String description  = str(item, "dataItemDesc");
-            String value        = str(item, "dataVal");
-            String unit         = str(item, "itemUnit");
-            String measuredAt   = formatDate(str(item, "occrrncDt"));
-            String divTypeCode  = str(item, "dataItemDiv");
-            String divType      = "M".equals(divTypeCode) ? "순간" : "D".equals(divTypeCode) ? "적산" : divTypeCode;
-
-            return new FlowRecord(id, facilityName, description, value, unit, measuredAt, divType);
+            String divTypeCode = str(item, "dataItemDiv");
+            String divType     = "M".equals(divTypeCode) ? "순간" : "D".equals(divTypeCode) ? "적산" : divTypeCode;
+            return new FlowRecord(
+                str(item, "fcltyMngNo"), str(item, "fcltyNm"),
+                str(item, "dataItemDesc"), str(item, "dataVal"),
+                str(item, "itemUnit"), formatDate(str(item, "occrrncDt")), divType
+            );
         } catch (Exception e) {
             log.warn("유량 항목 변환 실패: {}", item);
             return null;
         }
     }
 
-    // "2026052313" → "2026-05-23 13시"
     private String formatDate(String dt) {
         if (dt == null || dt.length() < 10) return dt;
         return dt.substring(0, 4) + "-" + dt.substring(4, 6) + "-"

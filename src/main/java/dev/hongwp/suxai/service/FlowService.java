@@ -6,29 +6,31 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class FlowService {
 
-    private static final long CACHE_TTL_SECONDS = 300; // 5분
+    private static final long CACHE_TTL_SECONDS = 300;
 
     private final KwaterFlowApiClient apiClient;
 
-    private volatile List<FlowRecord> cachedData = List.of();
-    private volatile Instant cacheExpiredAt = Instant.EPOCH;
+    private final ConcurrentHashMap<String, List<FlowRecord>> dataCache   = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Instant>          expiryCache = new ConcurrentHashMap<>();
 
     public FlowService(KwaterFlowApiClient apiClient) {
         this.apiClient = apiClient;
     }
 
-    public List<FlowRecord> getRecords() {
-        if (Instant.now().isAfter(cacheExpiredAt)) {
-            List<FlowRecord> fresh = apiClient.fetchFlowRecords();
+    public List<FlowRecord> getRecords(String sujCode) {
+        Instant expiry = expiryCache.getOrDefault(sujCode, Instant.EPOCH);
+        if (Instant.now().isAfter(expiry)) {
+            List<FlowRecord> fresh = apiClient.fetchFlowRecords(sujCode);
             if (!fresh.isEmpty()) {
-                cachedData = fresh;
-                cacheExpiredAt = Instant.now().plusSeconds(CACHE_TTL_SECONDS);
+                dataCache.put(sujCode, fresh);
+                expiryCache.put(sujCode, Instant.now().plusSeconds(CACHE_TTL_SECONDS));
             }
         }
-        return cachedData;
+        return dataCache.getOrDefault(sujCode, List.of());
     }
 }
