@@ -83,6 +83,46 @@
         .facility-select:focus { border-color: #e8453c; }
         .facility-count { font-size: 11px; color: #5a6070; white-space: nowrap; }
 
+        /* 날짜 선택 바 */
+        .date-bar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 8px 0 0;
+            padding: 10px 14px;
+            background: #181b22;
+            border: 1px solid #23272f;
+            border-radius: 8px;
+            flex-wrap: wrap;
+        }
+        .date-bar label { font-size: 11px; color: #5a6070; white-space: nowrap; }
+        .date-input {
+            background: #111318;
+            border: 1px solid #23272f;
+            color: #e8eaf0;
+            font-size: 13px;
+            padding: 5px 10px;
+            border-radius: 4px;
+            outline: none;
+            cursor: pointer;
+            color-scheme: dark;
+        }
+        .date-input:focus { border-color: #e8453c; }
+        .date-sep { font-size: 12px; color: #5a6070; }
+        .date-quick { display: flex; gap: 6px; margin-left: auto; }
+        .date-quick-btn {
+            background: #111318;
+            border: 1px solid #23272f;
+            color: #5a6070;
+            font-size: 11px;
+            padding: 4px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all .15s;
+        }
+        .date-quick-btn:hover  { border-color: #5a6070; color: #e8eaf0; }
+        .date-quick-btn.active { border-color: #e8453c; color: #e8453c; background: rgba(232,69,60,.08); }
+
         /* Tabs */
         .tabs { display: flex; border-bottom: 1px solid #23272f; margin-top: 16px; }
         .tab-btn {
@@ -276,6 +316,20 @@
         <span class="facility-count" id="facilityCount"></span>
     </div>
 
+    <!-- 날짜 선택 -->
+    <div class="date-bar">
+        <label>조회 기간</label>
+        <input type="date" class="date-input" id="dateFrom">
+        <span class="date-sep">~</span>
+        <input type="date" class="date-input" id="dateTo">
+        <div class="date-quick">
+            <button class="date-quick-btn" onclick="setQuickDate(0)">오늘</button>
+            <button class="date-quick-btn active" onclick="setQuickDate(7)">7일</button>
+            <button class="date-quick-btn" onclick="setQuickDate(30)">30일</button>
+            <button class="date-quick-btn" onclick="setQuickDate(90)">90일</button>
+        </div>
+    </div>
+
     <!-- Tabs -->
     <div class="tabs">
         <button class="tab-btn active" onclick="switchTab('wq', this)">수질</button>
@@ -317,6 +371,36 @@
 
 <script>
     let currentSujCode = '';
+
+    // ── 날짜 초기화 ──────────────────────────────────────────
+    function toDateStr(d) {
+        return d.toISOString().slice(0, 10);
+    }
+    function setQuickDate(days) {
+        const today = new Date();
+        const from  = new Date();
+        from.setDate(today.getDate() - days);
+        document.getElementById('dateFrom').value = toDateStr(from);
+        document.getElementById('dateTo').value   = toDateStr(today);
+        document.querySelectorAll('.date-quick-btn').forEach(b => b.classList.remove('active'));
+        event.target.classList.add('active');
+    }
+    function getDateParams() {
+        const from = document.getElementById('dateFrom').value;
+        const to   = document.getElementById('dateTo').value;
+        const p    = [];
+        if (from) p.push(`startDate=${from}`);
+        if (to)   p.push(`endDate=${to}`);
+        return p.join('&');
+    }
+    // 기본값: 최근 7일
+    (function initDates() {
+        const today = new Date();
+        const from  = new Date();
+        from.setDate(today.getDate() - 7);
+        document.getElementById('dateFrom').value = toDateStr(from);
+        document.getElementById('dateTo').value   = toDateStr(today);
+    })();
 
     // ── 정수장 선택 ───────────────────────────────────────────
     async function loadFacilities() {
@@ -450,8 +534,9 @@
         startProgress();
         showSkeleton('wq-cards');
         try {
-            const qs   = currentSujCode ? `?sujCode=${currentSujCode}` : '';
-            const data = await fetch(`/api/waterQuality${qs}`).then(r => r.json());
+            const params = [currentSujCode ? `sujCode=${currentSujCode}` : '', getDateParams()].filter(Boolean).join('&');
+            const qs     = params ? `?${params}` : '';
+            const data   = await fetch(`/api/waterQuality${qs}`).then(r => r.json());
             document.getElementById('wq-subtitle').textContent = '최신 데이터 순';
             document.getElementById('wq-cards').innerHTML = data.length
                 ? data.map((r, i) => wqCardHTML(i + 1, r)).join('')
@@ -465,8 +550,9 @@
         startProgress();
         showSkeleton('fl-cards');
         try {
-            const qs   = currentSujCode ? `?sujCode=${currentSujCode}` : '';
-            const data = await fetch(`/api/waterFlow${qs}`).then(r => r.json());
+            const params = [currentSujCode ? `sujCode=${currentSujCode}` : '', getDateParams()].filter(Boolean).join('&');
+            const qs     = params ? `?${params}` : '';
+            const data   = await fetch(`/api/waterFlow${qs}`).then(r => r.json());
             document.getElementById('fl-subtitle').textContent = '최신 데이터 순';
             document.getElementById('fl-cards').innerHTML = data.length
                 ? data.map((r, i) => flCardHTML(i + 1, r)).join('')
@@ -480,8 +566,9 @@
         startProgress();
         showAiSkeleton();
         try {
-            const qs = currentSujCode ? `?sujCode=${currentSujCode}` : '';
-            const d  = await fetch(`/api/analysis${qs}`).then(r => r.json());
+            const params = [currentSujCode ? `sujCode=${currentSujCode}` : '', getDateParams()].filter(Boolean).join('&');
+            const qs     = params ? `?${params}` : '';
+            const d      = await fetch(`/api/analysis${qs}`).then(r => r.json());
             const wqStat = d.wqCount > 0
                 ? `<span class="ai-stat">수질 <b style="color:#e8eaf0">${d.wqCount}건</b></span>`
                 : `<span class="ai-stat">수질 <b style="color:#5a6070">데이터 없음</b></span>`;
