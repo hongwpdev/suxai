@@ -46,20 +46,26 @@ public class ApiController {
 
     @GetMapping("/waterQuality")
     public List<WaterQualityRecord> waterQuality(
-            @RequestParam(required = false) String sujCode) {
-        return wqService.getRecords(sujCode != null ? sujCode : defaultSujCode);
+            @RequestParam(required = false) String sujCode,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate) {
+        return wqService.getRecords(sujCode != null ? sujCode : defaultSujCode, startDate, endDate);
     }
 
     @GetMapping("/waterFlow")
     public List<FlowRecord> flow(
-            @RequestParam(required = false) String sujCode) {
-        return flService.getRecords(sujCode != null ? sujCode : defaultSujCode);
+            @RequestParam(required = false) String sujCode,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate) {
+        return flService.getRecords(sujCode != null ? sujCode : defaultSujCode, startDate, endDate);
     }
 
     @GetMapping("/analysis")
     public AnalysisResult analysis(
-            @RequestParam(required = false) String sujCode) {
-        return analysisService.analyze(sujCode != null ? sujCode : defaultSujCode);
+            @RequestParam(required = false) String sujCode,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate) {
+        return analysisService.analyze(sujCode != null ? sujCode : defaultSujCode, startDate, endDate);
     }
 
     @GetMapping("/news")

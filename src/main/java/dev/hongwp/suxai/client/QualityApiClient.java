@@ -28,7 +28,7 @@ public class QualityApiClient {
         this.apiKey = apiKey;
     }
 
-    public List<WaterQualityRecord> fetchRecords(String sujCode) {
+    public List<WaterQualityRecord> fetchRecords(String sujCode, String startDate, String endDate) {
         if (apiKey.isBlank()) {
             log.warn("K-water API 키 미설정 — 수질 데이터 없음");
             return Collections.emptyList();
@@ -38,17 +38,20 @@ public class QualityApiClient {
             LocalDateTime now   = LocalDateTime.now();
             LocalDateTime start = now.minusHours(1);
 
+            String stDt = (startDate != null && !startDate.isBlank()) ? startDate : start.format(DATE_FMT);
+            String edDt = (endDate   != null && !endDate.isBlank())   ? endDate   : now.format(DATE_FMT);
+
             String url = WQ_URL
                 + "?serviceKey=" + apiKey
-                + "&stDt=" + start.format(DATE_FMT)
+                + "&stDt=" + stDt
                 + "&stTm=00"
-                + "&edDt=" + now.format(DATE_FMT)
+                + "&edDt=" + edDt
                 + "&edTm=24"
                 + "&sujCode=" + sujCode
                 + "&pageNo=1"
                 + "&numOfRows=100";
 
-            log.info("수질 API 호출: sujCode={}", sujCode);
+            log.info("수질 API 호출: sujCode={}, stDt={}, edDt={}", sujCode, stDt, edDt);
 
             @SuppressWarnings("unchecked")
             Map<String, Object> response = restTemplate.getForObject(url, Map.class);

@@ -35,7 +35,7 @@ public class AnalysisService {
         this.groqClient = groqClient;
     }
 
-    public AnalysisResult analyze(String sujCode) {
+    public AnalysisResult analyze(String sujCode, String startDate, String endDate) {
         if (!groqClient.isConfigured()) {
             return new AnalysisResult(
                 "Groq API 키가 설정되지 않았습니다.\n" +
@@ -44,20 +44,21 @@ public class AnalysisService {
             );
         }
 
-        Instant exp = expiry.get(sujCode);
+        String cacheKey = sujCode + "|" + (startDate != null ? startDate : "") + "|" + (endDate != null ? endDate : "");
+        Instant exp = expiry.get(cacheKey);
         if (exp != null && Instant.now().isBefore(exp)) {
-            return cache.get(sujCode);
+            return cache.get(cacheKey);
         }
 
-        List<WaterQualityRecord> wqList = wqService.getRecords(sujCode);
-        List<FlowRecord> flList = flService.getRecords(sujCode);
+        List<WaterQualityRecord> wqList = wqService.getRecords(sujCode, startDate, endDate);
+        List<FlowRecord> flList = flService.getRecords(sujCode, startDate, endDate);
 
         String prompt = buildPrompt(wqList, flList);
         String result = groqClient.analyze(prompt);
 
         AnalysisResult analysisResult = new AnalysisResult(result, now(), wqList.size(), flList.size());
-        cache.put(sujCode, analysisResult);
-        expiry.put(sujCode, Instant.now().plusSeconds(CACHE_TTL_SECONDS));
+        cache.put(cacheKey, analysisResult);
+        expiry.put(cacheKey, Instant.now().plusSeconds(CACHE_TTL_SECONDS));
         return analysisResult;
     }
 

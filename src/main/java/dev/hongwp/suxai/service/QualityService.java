@@ -22,15 +22,16 @@ public class QualityService {
         this.apiClient = apiClient;
     }
 
-    public List<WaterQualityRecord> getRecords(String sujCode) {
-        Instant expiry = expiryCache.getOrDefault(sujCode, Instant.EPOCH);
+    public List<WaterQualityRecord> getRecords(String sujCode, String startDate, String endDate) {
+        String cacheKey = sujCode + "|" + (startDate != null ? startDate : "") + "|" + (endDate != null ? endDate : "");
+        Instant expiry = expiryCache.getOrDefault(cacheKey, Instant.EPOCH);
         if (Instant.now().isAfter(expiry)) {
-            List<WaterQualityRecord> fresh = apiClient.fetchRecords(sujCode);
+            List<WaterQualityRecord> fresh = apiClient.fetchRecords(sujCode, startDate, endDate);
             if (!fresh.isEmpty()) {
-                dataCache.put(sujCode, fresh);
-                expiryCache.put(sujCode, Instant.now().plusSeconds(CACHE_TTL_SECONDS));
+                dataCache.put(cacheKey, fresh);
+                expiryCache.put(cacheKey, Instant.now().plusSeconds(CACHE_TTL_SECONDS));
             }
         }
-        return dataCache.getOrDefault(sujCode, List.of());
+        return dataCache.getOrDefault(cacheKey, List.of());
     }
 }

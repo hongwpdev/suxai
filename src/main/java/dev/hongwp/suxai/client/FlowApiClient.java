@@ -31,7 +31,7 @@ public class FlowApiClient {
         this.apiKey = apiKey;
     }
 
-    public List<FlowRecord> fetchFlowRecords(String sujCode) {
+    public List<FlowRecord> fetchFlowRecords(String sujCode, String startDate, String endDate) {
         if (apiKey.isBlank()) {
             log.warn("K-water API 키 미설정 — 유량 데이터 없음");
             return Collections.emptyList();
@@ -41,17 +41,20 @@ public class FlowApiClient {
             LocalDateTime now   = LocalDateTime.now();
             LocalDateTime start = now.minusHours(1);
 
+            String stDt = (startDate != null && !startDate.isBlank()) ? startDate : start.format(DATE_FMT);
+            String edDt = (endDate   != null && !endDate.isBlank())   ? endDate   : now.format(DATE_FMT);
+
             String url = FLOW_URL
                 + "?serviceKey=" + apiKey
-                + "&stDt=" + start.format(DATE_FMT)
+                + "&stDt=" + stDt
                 + "&stTm=00"
-                + "&edDt=" + now.format(DATE_FMT)
+                + "&edDt=" + edDt
                 + "&edTm=24"
                 + "&sujCode=" + sujCode
                 + "&pageNo=1"
                 + "&numOfRows=100";
 
-            log.info("유량 API 호출: sujCode={}", sujCode);
+            log.info("유량 API 호출: sujCode={}, stDt={}, edDt={}", sujCode, stDt, edDt);
 
             @SuppressWarnings("unchecked")
             Map<String, Object> response = restTemplate.getForObject(url, Map.class);
