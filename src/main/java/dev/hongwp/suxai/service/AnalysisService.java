@@ -3,7 +3,7 @@ package dev.hongwp.suxai.service;
 import dev.hongwp.suxai.client.GroqApiClient;
 import dev.hongwp.suxai.model.AnalysisResult;
 import dev.hongwp.suxai.model.FlowRecord;
-import dev.hongwp.suxai.model.WaterQualityRecord;
+import dev.hongwp.suxai.model.QualityRecord;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -50,7 +50,7 @@ public class AnalysisService {
             return cache.get(cacheKey);
         }
 
-        List<WaterQualityRecord> wqList = wqService.getRecords(sujCode, startDate, endDate);
+        List<QualityRecord> wqList = wqService.getRecords(sujCode, startDate, endDate);
         List<FlowRecord> flList = flService.getRecords(sujCode, startDate, endDate);
 
         String prompt = buildPrompt(wqList, flList);
@@ -62,11 +62,11 @@ public class AnalysisService {
         return analysisResult;
     }
 
-    private String buildPrompt(List<WaterQualityRecord> wqList, List<FlowRecord> flList) {
+    private String buildPrompt(List<QualityRecord> wqList, List<FlowRecord> flList) {
         // fcltyMngNo 기준으로 인덱싱
-        Map<String, WaterQualityRecord> wqMap = wqList.stream()
+        Map<String, QualityRecord> wqMap = wqList.stream()
             .collect(Collectors.toMap(
-                WaterQualityRecord::getId,
+                QualityRecord::getId,
                 r -> r,
                 (a, b) -> a  // 중복 시 첫 번째 유지
             ));
@@ -90,7 +90,7 @@ public class AnalysisService {
         if (!joinedIds.isEmpty()) {
             sb.append("## 수질·유량 통합 데이터 (상관관계 분석 대상)\n");
             joinedIds.stream().limit(10).forEach(id -> {
-                WaterQualityRecord wq = wqMap.get(id);
+                QualityRecord wq = wqMap.get(id);
                 List<FlowRecord> flows = flMap.get(id);
 
                 sb.append(String.format("### %s (시설번호: %s)%n", wq.getFacilityName(), id));
@@ -109,7 +109,7 @@ public class AnalysisService {
             sb.append("## 수질 데이터만 있는 시설\n");
             sb.append("시설명 | pH | 탁도(NTU) | 잔류염소(mg/L) | 측정시간\n");
             wqOnlyIds.stream().limit(10).forEach(id -> {
-                WaterQualityRecord r = wqMap.get(id);
+                QualityRecord r = wqMap.get(id);
                 sb.append(String.format("%s | %s | %s | %s | %s%n",
                     r.getFacilityName(), r.getPhVal(), r.getTbVal(), r.getClVal(), r.getMeasuredAt()));
             });

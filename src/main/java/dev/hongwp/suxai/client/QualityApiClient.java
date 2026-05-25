@@ -1,6 +1,6 @@
 package dev.hongwp.suxai.client;
 
-import dev.hongwp.suxai.model.WaterQualityRecord;
+import dev.hongwp.suxai.model.QualityRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -28,7 +28,7 @@ public class QualityApiClient {
         this.apiKey = apiKey;
     }
 
-    public List<WaterQualityRecord> fetchRecords(String sujCode, String startDate, String endDate) {
+    public List<QualityRecord> fetchRecords(String sujCode, String startDate, String endDate) {
         if (apiKey.isBlank()) {
             log.warn("K-water API 키 미설정 — 수질 데이터 없음");
             return Collections.emptyList();
@@ -97,7 +97,7 @@ public class QualityApiClient {
         }
     }
 
-    private List<WaterQualityRecord> parseRecords(Map<String, Object> response) {
+    private List<QualityRecord> parseRecords(Map<String, Object> response) {
         List<Map<String, Object>> items = extractItems(response);
         if (items.isEmpty()) {
             log.info("수질 API 조회 결과 없음");
@@ -107,9 +107,9 @@ public class QualityApiClient {
         return items.stream().map(this::toRecord).filter(Objects::nonNull).toList();
     }
 
-    private WaterQualityRecord toRecord(Map<String, Object> item) {
+    private QualityRecord toRecord(Map<String, Object> item) {
         try {
-            return new WaterQualityRecord(
+            return new QualityRecord(
                 str(item, "fcltyMngNo"),
                 str(item, "fcltyMngNm"),
                 str(item, "fcltyAddr"),

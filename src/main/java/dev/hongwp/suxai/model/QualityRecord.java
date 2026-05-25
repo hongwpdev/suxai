@@ -1,6 +1,6 @@
 package dev.hongwp.suxai.model;
 
-public class WaterQualityRecord {
+public class QualityRecord {
 
     private String id;           // fcltyMngNo
     private String facilityName; // fcltyMngNm
@@ -14,9 +14,9 @@ public class WaterQualityRecord {
     private String clVal;        // clVal (잔류염소)
     private String clUnit;       // clUnit
 
-    public WaterQualityRecord() {}
+    public QualityRecord() {}
 
-    public WaterQualityRecord(String id, String facilityName, String address, String divName,
+    public QualityRecord(String id, String facilityName, String address, String divName,
                               String measuredAt,
                               String phVal, String phUnit,
                               String tbVal, String tbUnit,

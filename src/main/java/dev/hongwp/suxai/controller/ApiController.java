@@ -45,7 +45,7 @@ public class ApiController {
     }
 
     @GetMapping("/waterQuality")
-    public List<WaterQualityRecord> waterQuality(
+    public List<QualityRecord> waterQuality(
             @RequestParam(required = false) String sujCode,
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate) {
