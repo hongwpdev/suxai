@@ -3,9 +3,11 @@ package dev.hongwp.suxai.controller;
 import dev.hongwp.suxai.model.*;
 import dev.hongwp.suxai.service.*;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api")
@@ -15,6 +17,7 @@ public class ApiController {
     private final FlowService         flService;
     private final AnalysisService     analysisService;
     private final FacilityService     facilityService;
+    private final AddressService      addressService;
     private final String              defaultSujCode;
 
     private static final List<NewsItem> NEWS = List.of(
@@ -31,11 +34,13 @@ public class ApiController {
                          FlowService flService,
                          AnalysisService analysisService,
                          FacilityService facilityService,
+                         AddressService addressService,
                          @Value("${kwater.suj.code}") String defaultSujCode) {
         this.wqService       = wqService;
         this.flService       = flService;
         this.analysisService = analysisService;
         this.facilityService = facilityService;
+        this.addressService  = addressService;
         this.defaultSujCode  = defaultSujCode;
     }
 
@@ -71,5 +76,21 @@ public class ApiController {
     @GetMapping("/news")
     public List<NewsItem> news() {
         return NEWS;
+    }
+
+    @GetMapping("/findFacility")
+    public ResponseEntity<?> findFacility(@RequestParam String query) {
+        if (query == null || query.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "주소를 입력해주세요."));
+        }
+        return addressService.findFacilityByAddress(query)
+            .map(f -> ResponseEntity.ok(Map.of(
+                "sujCode",      f.getSujCode(),
+                "facilityName", f.getFacilityName(),
+                "query",        query
+            )))
+            .orElseGet(() -> ResponseEntity.ok(
+                Map.of("error", "해당 지역의 정수장을 찾을 수 없습니다. 정수장명으로 직접 선택해주세요.")
+            ));
     }
 }

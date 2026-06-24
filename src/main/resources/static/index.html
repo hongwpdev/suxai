@@ -138,8 +138,114 @@
         }
         .tab-btn.active { color: #e8eaf0; border-bottom-color: #e8453c; }
         .tab-btn:hover  { color: #e8eaf0; }
+        .tab-btn-find   { margin-left: auto; color: #3ecf70 !important; }
+        .tab-btn-find.active { border-bottom-color: #3ecf70; }
         .tab-content         { display: none; padding-top: 16px; }
         .tab-content.active  { display: block; }
+
+        /* 내 정수장 찾기 */
+        .find-wrap {
+            background: #181b22;
+            border: 1px solid #23272f;
+            border-radius: 10px;
+            padding: 28px 24px;
+            margin-top: 8px;
+        }
+        .find-desc {
+            font-size: 13px;
+            color: #5a6070;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+        .find-input-row {
+            display: flex;
+            gap: 8px;
+        }
+        .find-input {
+            flex: 1;
+            background: #111318;
+            border: 1px solid #23272f;
+            color: #e8eaf0;
+            font-size: 14px;
+            padding: 10px 14px;
+            border-radius: 6px;
+            outline: none;
+            transition: border-color .15s;
+        }
+        .find-input:focus { border-color: #3ecf70; }
+        .find-input::placeholder { color: #3a4050; }
+        .find-btn {
+            background: #3ecf70;
+            color: #111318;
+            border: none;
+            font-size: 13px;
+            font-weight: 700;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: opacity .15s;
+        }
+        .find-btn:hover    { opacity: .85; }
+        .find-btn:disabled { opacity: .4; cursor: not-allowed; }
+        .find-result {
+            margin-top: 20px;
+            display: none;
+        }
+        .find-result.visible { display: block; }
+        .find-match {
+            background: #0e1117;
+            border: 1px solid #3ecf70;
+            border-radius: 8px;
+            padding: 18px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        .find-match-info { flex: 1; }
+        .find-match-label { font-size: 11px; color: #3ecf70; margin-bottom: 4px; }
+        .find-match-name  { font-size: 18px; font-weight: 700; color: #e8eaf0; }
+        .find-match-code  { font-size: 12px; color: #5a6070; margin-top: 2px; }
+        .find-go-btn {
+            background: #e8453c;
+            color: #fff;
+            border: none;
+            font-size: 13px;
+            font-weight: 700;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: opacity .15s;
+        }
+        .find-go-btn:hover { opacity: .85; }
+        .find-error {
+            background: #1a1018;
+            border: 1px solid #e8453c;
+            border-radius: 8px;
+            padding: 14px 18px;
+            font-size: 13px;
+            color: #e8453c;
+        }
+        .find-examples {
+            margin-top: 16px;
+            font-size: 12px;
+            color: #3a4050;
+        }
+        .find-example-tag {
+            display: inline-block;
+            background: #0e1117;
+            border: 1px solid #23272f;
+            color: #5a6070;
+            padding: 3px 10px;
+            border-radius: 20px;
+            margin: 3px 3px 0 0;
+            cursor: pointer;
+            transition: border-color .15s, color .15s;
+        }
+        .find-example-tag:hover { border-color: #3ecf70; color: #3ecf70; }
 
         /* Section header */
         .section-header {
@@ -332,9 +438,10 @@
 
     <!-- Tabs -->
     <div class="tabs">
-        <button class="tab-btn active" onclick="switchTab('wq', this)">수질</button>
-        <button class="tab-btn"        onclick="switchTab('fl',  this)">유량</button>
-        <button class="tab-btn"        onclick="switchTab('ai',  this)">AI 분석</button>
+        <button class="tab-btn active"   onclick="switchTab('wq',   this)">수질</button>
+        <button class="tab-btn"          onclick="switchTab('fl',   this)">유량</button>
+        <button class="tab-btn"          onclick="switchTab('ai',   this)">AI 분석</button>
+        <button class="tab-btn tab-btn-find" onclick="switchTab('find', this)">📍 내 정수장 찾기</button>
     </div>
 
     <!-- 수질 Tab -->
@@ -365,6 +472,35 @@
         </div>
         <div class="subtitle">수질·유량 데이터를 AI가 종합 분석합니다 (5분 캐시)</div>
         <div id="ai-result"></div>
+    </div>
+
+    <!-- 내 정수장 찾기 Tab -->
+    <div id="tab-find" class="tab-content">
+        <div class="section-header">
+            <div class="section-title">📍 내 정수장 찾기</div>
+        </div>
+        <div class="find-wrap">
+            <p class="find-desc">
+                거주 지역 주소를 입력하면 해당 지역에 수돗물을 공급하는 정수장을 찾아드립니다.<br>
+                시/군/구 단위로 입력하면 가장 정확하게 찾을 수 있습니다.
+            </p>
+            <div class="find-input-row">
+                <input id="findInput" class="find-input" type="text"
+                       placeholder="예) 파주시, 경기도 고양시 덕양구, 인천 부평구"
+                       onkeydown="if(event.key==='Enter') searchFacility()" />
+                <button id="findBtn" class="find-btn" onclick="searchFacility()">찾기</button>
+            </div>
+            <div class="find-examples">
+                빠른 검색:
+                <span class="find-example-tag" onclick="quickFind('파주시')">파주시</span>
+                <span class="find-example-tag" onclick="quickFind('고양시')">고양시</span>
+                <span class="find-example-tag" onclick="quickFind('인천 부평구')">인천 부평구</span>
+                <span class="find-example-tag" onclick="quickFind('수원시')">수원시</span>
+                <span class="find-example-tag" onclick="quickFind('안양시')">안양시</span>
+                <span class="find-example-tag" onclick="quickFind('청주시')">청주시</span>
+            </div>
+            <div id="findResult" class="find-result"></div>
+        </div>
     </div>
 
 </div>
@@ -589,6 +725,67 @@
         } finally {
             finishProgress();
         }
+    }
+
+    // ── 내 정수장 찾기 ───────────────────────────────────────────
+    function quickFind(text) {
+        document.getElementById('findInput').value = text;
+        searchFacility();
+    }
+
+    async function searchFacility() {
+        const query = document.getElementById('findInput').value.trim();
+        if (!query) return;
+
+        const btn    = document.getElementById('findBtn');
+        const result = document.getElementById('findResult');
+        btn.disabled    = true;
+        btn.textContent = '검색 중…';
+        result.className = 'find-result visible';
+        result.innerHTML = '<div class="find-examples" style="padding:12px 0">검색 중입니다…</div>';
+
+        try {
+            const data = await fetch(`/api/findFacility?query=${encodeURIComponent(query)}`).then(r => r.json());
+
+            if (data.error) {
+                result.innerHTML = `<div class="find-error">⚠ ${data.error}</div>`;
+            } else {
+                result.innerHTML = `
+                    <div class="find-match">
+                        <div class="find-match-info">
+                            <div class="find-match-label">✓ "${query}" 지역 담당 정수장</div>
+                            <div class="find-match-name">${data.facilityName}</div>
+                            <div class="find-match-code">수계코드: ${data.sujCode}</div>
+                        </div>
+                        <button class="find-go-btn" onclick="goToFacility('${data.sujCode}', '${data.facilityName}')">
+                            수질 확인하기 →
+                        </button>
+                    </div>`;
+            }
+        } catch (e) {
+            result.innerHTML = `<div class="find-error">⚠ 서버 연결에 실패했습니다. 잠시 후 다시 시도해주세요.</div>`;
+        } finally {
+            btn.disabled    = false;
+            btn.textContent = '찾기';
+        }
+    }
+
+    function goToFacility(sujCode, facilityName) {
+        // 드롭다운에서 해당 정수장 선택
+        const sel = document.getElementById('facilitySelect');
+        for (const opt of sel.options) {
+            if (opt.value === sujCode) {
+                sel.value = sujCode;
+                break;
+            }
+        }
+        currentSujCode = sujCode;
+
+        // 수질 탭으로 이동 후 데이터 조회
+        const wqBtn = document.querySelector('.tab-btn');
+        switchTab('wq', wqBtn);
+        fetchWaterQuality();
+        fetchWaterFlux();
     }
 
     // ── 초기화 ─────────────────────────────────────────────────
