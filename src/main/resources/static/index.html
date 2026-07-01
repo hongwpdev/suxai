@@ -192,7 +192,7 @@
             margin-top: 20px;
             display: none;
         }
-        .find-result.visible { display: block; }
+        .find-result.visible { display: flex; flex-direction: column; gap: 12px; }
         .find-match {
             background: #0e1117;
             border: 1px solid #3ecf70;
@@ -206,8 +206,27 @@
         }
         .find-match-info { flex: 1; }
         .find-match-label { font-size: 11px; color: #3ecf70; margin-bottom: 4px; }
-        .find-match-name  { font-size: 18px; font-weight: 700; color: #e8eaf0; }
-        .find-match-code  { font-size: 12px; color: #5a6070; margin-top: 2px; }
+        .find-match-name  { font-size: 18px; font-weight: 700; color: #e8eaf0; margin-bottom: 8px; }
+        .find-match-meta  { display: flex; flex-wrap: wrap; gap: 8px; }
+        .find-meta-item   { font-size: 12px; color: #5a6070; background: #111318; border: 1px solid #23272f; border-radius: 4px; padding: 3px 8px; }
+        .find-btn-group {
+            display: flex;
+            gap: 8px;
+            flex-wrap: nowrap;
+        }
+        .find-map-btn {
+            background: #fee500;
+            color: #3c1e1e;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: opacity .15s;
+        }
+        .find-map-btn:hover { opacity: .85; }
         .find-go-btn {
             background: #e8453c;
             color: #fff;
@@ -750,17 +769,26 @@
             if (data.error) {
                 result.innerHTML = `<div class="find-error">⚠ ${data.error}</div>`;
             } else {
-                result.innerHTML = `
+                const cards = data.results.map((f, i) => `
                     <div class="find-match">
                         <div class="find-match-info">
-                            <div class="find-match-label">✓ "${query}" 지역 담당 정수장</div>
-                            <div class="find-match-name">${data.facilityName}</div>
-                            <div class="find-match-code">수계코드: ${data.sujCode}</div>
+                            <div class="find-match-label">${i === 0 ? '✓ 가장 가까운 정수장' : `${i + 1}번째 가까운 정수장`} · ${f.distanceKm}km</div>
+                            <div class="find-match-name">${f.facilityName}</div>
+                            <div class="find-match-meta">
+                                <span class="find-meta-item">📍 ${f.address}</span>
+                                <span class="find-meta-item">🔢 수계코드 ${f.sujCode}</span>
+                            </div>
                         </div>
-                        <button class="find-go-btn" onclick="goToFacility('${data.sujCode}', '${data.facilityName}')">
-                            수질 확인하기 →
-                        </button>
-                    </div>`;
+                        <div class="find-btn-group">
+                            <button class="find-map-btn" onclick="openKakaoMap('${f.facilityName}', ${f.lat}, ${f.lng})">
+                                🗺 지도
+                            </button>
+                            <button class="find-go-btn" onclick="goToFacility('${f.sujCode}', '${f.facilityName}')">
+                                수질 확인하기 →
+                            </button>
+                        </div>
+                    </div>`).join('');
+                result.innerHTML = cards;
             }
         } catch (e) {
             result.innerHTML = `<div class="find-error">⚠ 서버 연결에 실패했습니다. 잠시 후 다시 시도해주세요.</div>`;
@@ -768,6 +796,10 @@
             btn.disabled    = false;
             btn.textContent = '찾기';
         }
+    }
+
+    function openKakaoMap(facilityName, lat, lng) {
+        window.open('https://map.kakao.com/link/map/' + encodeURIComponent(facilityName) + ',' + lat + ',' + lng, '_blank');
     }
 
     function goToFacility(sujCode, facilityName) {

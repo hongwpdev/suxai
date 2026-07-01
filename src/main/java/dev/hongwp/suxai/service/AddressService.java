@@ -3,6 +3,7 @@ package dev.hongwp.suxai.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.hongwp.suxai.client.KakaoApiClient;
 import dev.hongwp.suxai.model.FacilityInfo;
+import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ClassPathResource;
@@ -15,9 +16,16 @@ public class AddressService {
 
     private static final Logger log = LoggerFactory.getLogger(AddressService.class);
 
-    private final KakaoApiClient   kakaoClient;
-    private final FacilityService  facilityService;
+    private final KakaoApiClient  kakaoClient;
+    private final FacilityService facilityService;
     private final List<Map<String, Object>> mappingRules;
+
+    // 시작 시 geocode 결과를 캐시
+    private final List<CachedFacility> facilityCache = new ArrayList<>();
+
+    public record FacilityMatch(FacilityInfo facility, String address, double lat, double lng, double distanceKm) {}
+
+    private record CachedFacility(FacilityInfo facility, String address, double lat, double lng) {}
 
     @SuppressWarnings("unchecked")
     public AddressService(KakaoApiClient kakaoClient,
@@ -31,56 +39,67 @@ public class AddressService {
         this.mappingRules = (List<Map<String, Object>>) root.get("mapping");
     }
 
-    /**
-     * 주소 입력 → 매칭된 정수장 반환. 없으면 Optional.empty().
-     */
-    public Optional<FacilityInfo> findFacilityByAddress(String query) {
-        // 1. 카카오 API로 행정구역 추출
-        Map<String, String> region = kakaoClient.searchRegion(query);
-        String sido    = region.getOrDefault("sido",    "");
-        String sigungu = region.getOrDefault("sigungu", "");
-
-        log.info("주소 검색 - query={}, sido={}, sigungu={}", query, sido, sigungu);
-
-        // 2. 매핑 규칙에서 키워드 찾기 (시군구 우선, 시도 차선)
-        String keyword = findKeyword(sigungu);
-        if (keyword.isEmpty()) keyword = findKeyword(sido);
-        if (keyword.isEmpty()) keyword = findKeywordByInput(query); // 입력값 직접 검색
-
-        log.info("매핑 키워드: {}", keyword);
-
-        if (keyword.isEmpty()) return Optional.empty();
-
-        // 3. 실시간 정수장 목록에서 키워드 매칭
+    @PostConstruct
+    @SuppressWarnings("unchecked")
+    public void initCache() {
         List<FacilityInfo> facilities = facilityService.getFacilities();
-        final String kw = keyword;
-        return facilities.stream()
-            .filter(f -> f.getFacilityName().contains(kw))
-            .findFirst();
+        for (Map<String, Object> rule : mappingRules) {
+            String keyword = (String) rule.get("keyword");
+            String address = (String) rule.getOrDefault("address", "");
+
+            FacilityInfo matched = facilities.stream()
+                .filter(f -> f.getFacilityName().contains(keyword))
+                .findFirst()
+                .orElse(null);
+            if (matched == null) {
+                log.warn("정수장 매핑 실패 - keyword: {}", keyword);
+                continue;
+            }
+
+            double[] coords = kakaoClient.geocode(address);
+            if (coords.length == 2) {
+                facilityCache.add(new CachedFacility(matched, address, coords[0], coords[1]));
+                log.info("정수장 캐시: {} → {},{}", matched.getFacilityName(), coords[0], coords[1]);
+            } else {
+                log.warn("좌표 조회 실패 - {}: {}", keyword, address);
+            }
+        }
+        log.info("정수장 위치 캐시 완료: {}개", facilityCache.size());
     }
 
-    @SuppressWarnings("unchecked")
-    private String findKeyword(String regionName) {
-        if (regionName.isBlank()) return "";
-        for (Map<String, Object> rule : mappingRules) {
-            List<String> regions = (List<String>) rule.get("regions");
-            boolean match = regions.stream().anyMatch(r ->
-                regionName.contains(r) || r.contains(regionName.replace("시", "").replace("구", "").replace("군", ""))
-            );
-            if (match) return (String) rule.get("keyword");
+    /**
+     * 사용자 입력 위치에서 가까운 정수장을 거리순으로 반환
+     */
+    public List<FacilityMatch> findNearestFacilities(String query, int limit) {
+        double[] userCoords = kakaoClient.geocode(query);
+        if (userCoords.length != 2) {
+            // geocode 실패 시 키워드 검색으로 fallback
+            userCoords = kakaoClient.geocodeByKeyword(query);
         }
-        return "";
+        if (userCoords.length != 2) {
+            log.warn("위치 변환 실패: {}", query);
+            return List.of();
+        }
+
+        double userLat = userCoords[0];
+        double userLng = userCoords[1];
+
+        return facilityCache.stream()
+            .map(c -> new FacilityMatch(
+                c.facility(), c.address(), c.lat(), c.lng(),
+                haversineKm(userLat, userLng, c.lat(), c.lng())))
+            .sorted(Comparator.comparingDouble(FacilityMatch::distanceKm))
+            .limit(limit)
+            .toList();
     }
 
-    @SuppressWarnings("unchecked")
-    private String findKeywordByInput(String input) {
-        for (Map<String, Object> rule : mappingRules) {
-            List<String> regions = (List<String>) rule.get("regions");
-            boolean match = regions.stream().anyMatch(r ->
-                input.contains(r) || r.contains(input.replaceAll("[시구군도]$", ""))
-            );
-            if (match) return (String) rule.get("keyword");
-        }
-        return "";
+    private double haversineKm(double lat1, double lng1, double lat2, double lng2) {
+        final double R = 6371.0;
+        double dLat = Math.toRadians(lat2 - lat1);
+        double dLng = Math.toRadians(lng2 - lng1);
+        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
+                 + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
+                 * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     }
 }

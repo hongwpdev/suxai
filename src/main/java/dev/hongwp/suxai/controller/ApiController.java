@@ -79,18 +79,31 @@ public class ApiController {
     }
 
     @GetMapping("/findFacility")
-    public ResponseEntity<?> findFacility(@RequestParam String query) {
+    public ResponseEntity<?> findFacility(
+            @RequestParam String query,
+            @RequestParam(defaultValue = "3") int limit) {
         if (query == null || query.isBlank()) {
             return ResponseEntity.badRequest().body(Map.of("error", "주소를 입력해주세요."));
         }
-        return addressService.findFacilityByAddress(query)
-            .map(f -> ResponseEntity.ok(Map.of(
-                "sujCode",      f.getSujCode(),
-                "facilityName", f.getFacilityName(),
-                "query",        query
-            )))
-            .orElseGet(() -> ResponseEntity.ok(
-                Map.of("error", "해당 지역의 정수장을 찾을 수 없습니다. 정수장명으로 직접 선택해주세요.")
-            ));
+        List<AddressService.FacilityMatch> results = addressService.findNearestFacilities(query, limit);
+        if (results.isEmpty()) {
+            return ResponseEntity.ok(Map.of("error", "위치를 찾을 수 없습니다. 더 구체적인 주소를 입력해주세요."));
+        }
+        List<Map<String, Object>> list = results.stream()
+            .map(m -> {
+                Map<String, Object> item = new java.util.LinkedHashMap<>();
+                item.put("sujCode",      m.facility().getSujCode());
+                item.put("facilityName", m.facility().getFacilityName());
+                item.put("address",      m.address());
+                item.put("lat",          m.lat());
+                item.put("lng",          m.lng());
+                item.put("distanceKm",   Math.round(m.distanceKm() * 10.0) / 10.0);
+                return item;
+            })
+            .toList();
+        Map<String, Object> resp = new java.util.LinkedHashMap<>();
+        resp.put("query",   query);
+        resp.put("results", list);
+        return ResponseEntity.ok(resp);
     }
 }

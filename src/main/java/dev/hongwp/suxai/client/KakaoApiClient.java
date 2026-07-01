@@ -91,6 +91,76 @@ public class KakaoApiClient {
         }
     }
 
+    /**
+     * 주소 문자열 → [lat, lng] 반환. 실패 시 빈 배열 반환.
+     */
+    @SuppressWarnings("unchecked")
+    public double[] geocode(String address) {
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Authorization", "KakaoAK " + apiKey);
+            HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+            org.springframework.web.util.UriComponents uri =
+                org.springframework.web.util.UriComponentsBuilder
+                    .fromHttpUrl("https://dapi.kakao.com/v2/local/search/address.json")
+                    .queryParam("query", address)
+                    .build();
+            ResponseEntity<Map> resp = restTemplate.exchange(
+                uri.toUriString(), HttpMethod.GET, entity, Map.class);
+
+            if (resp.getBody() == null) return new double[0];
+
+            List<Map<String, Object>> docs =
+                (List<Map<String, Object>>) resp.getBody().get("documents");
+            if (docs == null || docs.isEmpty()) return new double[0];
+
+            double lat = Double.parseDouble(str(docs.get(0), "y"));
+            double lng = Double.parseDouble(str(docs.get(0), "x"));
+            log.info("주소 좌표 변환: {} → {},{}", address, lat, lng);
+            return new double[]{ lat, lng };
+
+        } catch (Exception e) {
+            log.warn("주소 좌표 변환 실패: {} - {}", address, e.getMessage());
+            return new double[0];
+        }
+    }
+
+    /**
+     * 키워드로 장소 검색 → [lat, lng] 반환. 주소 geocode 실패 시 fallback용.
+     */
+    @SuppressWarnings("unchecked")
+    public double[] geocodeByKeyword(String query) {
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Authorization", "KakaoAK " + apiKey);
+            HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+            org.springframework.web.util.UriComponents uri =
+                org.springframework.web.util.UriComponentsBuilder
+                    .fromHttpUrl("https://dapi.kakao.com/v2/local/search/keyword.json")
+                    .queryParam("query", query)
+                    .build();
+
+            ResponseEntity<Map> resp = restTemplate.exchange(
+                uri.toUriString(), HttpMethod.GET, entity, Map.class);
+
+            if (resp.getBody() == null) return new double[0];
+            List<Map<String, Object>> docs =
+                (List<Map<String, Object>>) resp.getBody().get("documents");
+            if (docs == null || docs.isEmpty()) return new double[0];
+
+            double lat = Double.parseDouble(str(docs.get(0), "y"));
+            double lng = Double.parseDouble(str(docs.get(0), "x"));
+            log.info("키워드 좌표 변환: {} → {},{}", query, lat, lng);
+            return new double[]{ lat, lng };
+
+        } catch (Exception e) {
+            log.warn("키워드 좌표 변환 실패: {} - {}", query, e.getMessage());
+            return new double[0];
+        }
+    }
+
     private String str(Map<String, Object> m, String key) {
         Object v = m.get(key);
         return v == null ? "" : v.toString().trim();
