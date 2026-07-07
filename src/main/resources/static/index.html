@@ -143,6 +143,112 @@
         .tab-content         { display: none; padding-top: 16px; }
         .tab-content.active  { display: block; }
 
+        /* 일일 보고 */
+        .report-panel {
+            background: #181b22;
+            border: 1px solid #23272f;
+            border-radius: 10px;
+            padding: 20px;
+        }
+        .report-toolbar {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .report-date {
+            background: #111318;
+            border: 1px solid #23272f;
+            color: #e8eaf0;
+            font-size: 13px;
+            padding: 8px 10px;
+            border-radius: 6px;
+            outline: none;
+            color-scheme: dark;
+        }
+        .report-date:focus { border-color: #e8453c; }
+        .report-btn {
+            background: #e8453c;
+            color: #fff;
+            border: none;
+            font-size: 13px;
+            font-weight: 700;
+            padding: 9px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .report-btn.secondary {
+            background: #111318;
+            border: 1px solid #23272f;
+            color: #e8eaf0;
+        }
+        .report-meta {
+            font-size: 12px;
+            color: #5a6070;
+            margin-bottom: 14px;
+        }
+        .report-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .report-empty {
+            min-height: 180px;
+            background: #111318;
+            border: 1px solid #23272f;
+            border-radius: 8px;
+            padding: 16px;
+            font-size: 13px;
+            color: #5a6070;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .report-item {
+            background: #111318;
+            border: 1px solid #23272f;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .report-item.open {
+            border-color: #e8453c;
+        }
+        .report-item-title {
+            width: 100%;
+            background: transparent;
+            border: none;
+            color: #e8eaf0;
+            padding: 14px 16px;
+            text-align: left;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .report-item-title::after {
+            content: '+';
+            color: #e8453c;
+            font-size: 16px;
+        }
+        .report-item.open .report-item-title::after {
+            content: '-';
+        }
+        .report-item-body {
+            display: none;
+            border-top: 1px solid #23272f;
+            padding: 16px;
+            white-space: pre-wrap;
+            line-height: 1.7;
+            font-size: 13px;
+            color: #e8eaf0;
+        }
+        .report-item.open .report-item-body {
+            display: block;
+        }
+
         /* 내 정수장 찾기 */
         .find-wrap {
             background: #181b22;
@@ -460,6 +566,7 @@
         <button class="tab-btn active"   onclick="switchTab('wq',   this)">수질</button>
         <button class="tab-btn"          onclick="switchTab('fl',   this)">유량</button>
         <button class="tab-btn"          onclick="switchTab('ai',   this)">AI 분석</button>
+        <button class="tab-btn"          onclick="switchTab('report', this)">일일 보고(AI)</button>
         <button class="tab-btn tab-btn-find" onclick="switchTab('find', this)">📍 내 정수장 찾기</button>
     </div>
 
@@ -491,6 +598,23 @@
         </div>
         <div class="subtitle">수질·유량 데이터를 AI가 종합 분석합니다 (5분 캐시)</div>
         <div id="ai-result"></div>
+    </div>
+
+    <!-- 일일 보고 Tab -->
+    <div id="tab-report" class="tab-content">
+        <div class="section-header">
+            <div class="section-title">일일 보고 게시판</div>
+        </div>
+        <div class="subtitle">기본 화면은 생성된 보고서 목록이며, 제목을 누르면 본문이 펼쳐집니다.</div>
+        <div class="report-panel">
+            <div class="report-toolbar">
+                <input type="date" class="report-date" id="reportDate">
+                <button class="report-btn" id="reportRunBtn" onclick="runDailyReport()">보고서 수동 생성</button>
+                <button class="report-btn secondary" onclick="loadDailyReports()">목록 새로고침</button>
+            </div>
+            <div class="report-meta" id="reportMeta">보고서 목록을 불러오는 중입니다.</div>
+            <div class="report-list" id="reportList"></div>
+        </div>
     </div>
 
     <!-- 내 정수장 찾기 Tab -->
@@ -555,6 +679,7 @@
         from.setDate(today.getDate() - 7);
         document.getElementById('dateFrom').value = toDateStr(from);
         document.getElementById('dateTo').value   = toDateStr(today);
+        document.getElementById('reportDate').value = toDateStr(today);
     })();
 
     // ── 정수장 선택 ───────────────────────────────────────────
@@ -746,6 +871,88 @@
         }
     }
 
+    async function runDailyReport() {
+        const btn = document.getElementById('reportRunBtn');
+        const date = document.getElementById('reportDate').value;
+        const params = new URLSearchParams();
+        if (currentSujCode) params.set('sujCode', currentSujCode);
+        if (date) {
+            params.set('startDate', date);
+            params.set('endDate', date);
+        }
+
+        btn.disabled = true;
+        btn.textContent = '생성 중...';
+        document.getElementById('reportMeta').textContent = 'AI 일일 보고서를 생성하고 있습니다.';
+        document.getElementById('reportList').innerHTML = '<div class="report-empty">보고서 생성 중입니다...</div>';
+
+        try {
+            const data = await fetch(`/api/daily-report/run?${params.toString()}`, {
+                method: 'POST'
+            }).then(r => r.json());
+
+            document.getElementById('reportMeta').textContent = data.message || '보고서가 처리되었습니다.';
+            await loadDailyReports(data.reportDate);
+        } catch (e) {
+            document.getElementById('reportMeta').textContent = '보고서 생성에 실패했습니다.';
+            document.getElementById('reportList').innerHTML = '<div class="report-empty">서버 연결에 실패했습니다. 잠시 후 다시 시도해주세요.</div>';
+        } finally {
+            btn.disabled = false;
+            btn.textContent = '보고서 수동 생성';
+        }
+    }
+
+    async function loadDailyReports(openDate = null) {
+        document.getElementById('reportMeta').textContent = '보고서 목록을 불러오는 중입니다.';
+        try {
+            const list = await fetch('/api/daily-report/list').then(r => r.json());
+            renderDailyReportList(list, openDate);
+        } catch (e) {
+            document.getElementById('reportMeta').textContent = '보고서 목록 조회에 실패했습니다.';
+            document.getElementById('reportList').innerHTML = '<div class="report-empty">보고서 목록을 불러오지 못했습니다.</div>';
+        }
+    }
+
+    function renderDailyReportList(list, openDate = null) {
+        const reportList = document.getElementById('reportList');
+        if (!list.length) {
+            document.getElementById('reportMeta').textContent = '생성된 보고서가 없습니다.';
+            reportList.innerHTML = '<div class="report-empty">아직 생성된 일일 보고서가 없습니다.</div>';
+            return;
+        }
+
+        document.getElementById('reportMeta').textContent = `총 ${list.length}건의 보고서가 있습니다.`;
+        reportList.innerHTML = list.map((item, index) => {
+            const isOpen = openDate
+                ? item.reportDate.join('-') === normalizeReportDate(openDate)
+                : false;
+            return `
+                <div class="report-item ${isOpen ? 'open' : ''}">
+                    <button class="report-item-title" onclick="toggleReportItem(this)">${item.title}</button>
+                    <div class="report-item-body">${escapeHtml(item.content)}</div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function normalizeReportDate(reportDate) {
+        if (Array.isArray(reportDate)) {
+            return `${reportDate[0]}-${String(reportDate[1]).padStart(2, '0')}-${String(reportDate[2]).padStart(2, '0')}`;
+        }
+        return reportDate;
+    }
+
+    function toggleReportItem(button) {
+        button.parentElement.classList.toggle('open');
+    }
+
+    function escapeHtml(text) {
+        return (text || '')
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;');
+    }
+
     // ── 내 정수장 찾기 ───────────────────────────────────────────
     function quickFind(text) {
         document.getElementById('findInput').value = text;
@@ -822,6 +1029,7 @@
 
     // ── 초기화 ─────────────────────────────────────────────────
     loadFacilities(); // 정수장 목록 로드 → 완료 후 자동으로 첫 정수장 데이터 조회
+    loadDailyReports();
 </script>
 </body>
 </html>
